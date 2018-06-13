@@ -7,25 +7,12 @@
 /**
  * initializes the server and opens a general requests socket.
  */
-WhatsappServer::WhatsappServer()
+WhatsappServer::WhatsappServer(unsigned short portNum)
 {
-
-}
-
-/**
- * Accepts a connection request and opens a socket for communication with the client.
- * @return
- */
-int WhatsappServer::acceptConnection()
-{
-    // initialize protocol interpreter
-//    this->commandInterpreter->insert(std::pair<std::string, void* (*)(void*)>())
-
     // init hostent
-    if (gethostname(this->myName, 30) == -1) //todo - macro raises error
+    if (gethostname(this->myName, 30) == -1) // macro raises error
     {
         //error
-        return 1;
     }
     this->hp = gethostbyname(this->myName);
     if (!this->hp)
@@ -35,9 +22,9 @@ int WhatsappServer::acceptConnection()
 
     // init sockets address
     memset(&this->sa, 0, sizeof(struct sockadder_in));
-    sa.sin_family = hp->h_addrtype;
-    memcpy(&sa.sin_addr, hp->h_addr, hp->h_length);
-    sa.sin_port = htons(NULL); // todo - how to determine portnum?
+    sa.sin_family = (sa_family_t)hp->h_addrtype;
+    memcpy(&sa.sin_addr, hp->h_addr, (size_t)hp->h_length);
+    sa.sin_port = htons(portNum);
 
     // init and bind listening socket
     if ((this->genSocket = socket(AF_INET, SOCK_STREAM, 0) < 0))
@@ -49,23 +36,14 @@ int WhatsappServer::acceptConnection()
         //error
         close(this->genSocket);
     }
+}
 
-//    listen(this->genSocket, ); //todo - ????
-    fd_set selectSet;
-    while (true) //todo - should be in here or in the main?
-    {
-        selectSet = this->clientsFds; // will be changed in-place to contain only ready fds
-        int ready = select(100, &selectSet, NULL, NULL, NULL); // todo - what's the max fds num?
-//        for (fd_set fd: this->clientsFds)
-//        {
-////            if (FD_ISSET(fd, &selectSet))
-////            {
-////
-////            }
-//
-//        }
-    }
-
+/**
+ * Accepts a connection request and opens a socket for communication with the client.
+ * @return
+ */
+int WhatsappServer::acceptConnection()
+{
 
 }
 
@@ -73,33 +51,108 @@ int WhatsappServer::acceptConnection()
  * Reads messages from the client and carries them out.
  * @return
  */
-int WhatsappServer::readClient()
+int WhatsappServer::readClient(int fd) // fd or name? who calls it?
 {
+    // read message from buffer
+    auto buf = new char[257];
+    memset(buf, '\0', 257);
+    int byteCount = 0;
+    int byteRead = 0;
+
+    while (byteCount < 256)
+    {
+        byteRead = (int)read(fd, buf, (size_t)256-byteCount);
+        if (byteRead > 0)
+        {
+            byteCount += byteRead;
+            buf += byteRead;
+        }
+        if (byteRead < 1)
+        {
+            //error
+        }
+    }
+
+    // parse command:
+    command_type commandT;
+    std::string name;
+    std::string messsage;
+    std::vector<std::string> clients;
+    parse_command(buf, commandT, name, messsage, clients);
+
+    switch (commandT)
+    {
+        case CREATE_GROUP:
+            createGroup(name, clients); //todo - does 'clients' includes the sender's name?
+            break;
+        case SEND:
+            writeClient(name, messsage);
+            break;
+        case WHO:
+            whosConnected();
+            break;
+        case EXIT:
+            exitClient(name);
+            break;
+        default: //we won't get here since Client makes sure that the command type is valid.
+            break;
+    }
+    delete buf;
+
+
+
 
 }
 
 /**
- * Writes messages to the client.
+ * Writes message to the client.
  * @return
  */
-int WhatsappServer::writeClient()
+int WhatsappServer::writeClient(std::string& destName, std::string& message)
 {
+    // verify that the client exists:
+    if (this->connectedClients.find(destName) == this->connectedClients.end()) //what happens if map is empty?
+    {
+        //error
+    }
 
-}// writes msg according to the protocol
+    int byteCount = 0;
+    int byteWritten = 0;
+    while (byteCount < 256)
+    {
+        byteWritten = (int)write(this->connectedClients.at(destName),
+                                 message.c_str() + byteWritten, (size_t)256-byteCount); // ok?
+        if (byteWritten > 0)
+        {
+            byteCount += byteWritten;
+        }
+        else
+        {
+            //error
+        }
+    }
+}
 
 /**
  * @return a list containing all connected clients names.
  */
 int WhatsappServer::whosConnected()
 {
-
+    auto clientsNames = new char[(30*this->connectedClients.size()) + 1];
+    memset(clientsNames, '\0', (30*this->connectedClients.size()) + 1);
+    for (const auto& pair: this->connectedClients)
+    {
+        memcpy(clientsNames, pair.first, sizeof(char)*pair.first.length());
+    }
+    print_who_server(clientsNames);
+    delete clientsNames;
 }
 
 /**
  * Executes exit request of the client.
  * @return
  */
-int WhatsappServer::exitClient()
+int WhatsappServer::exitClient(std::string& name)
 {
 
 }
@@ -108,7 +161,7 @@ int WhatsappServer::exitClient()
  * Removes a client from a group.
  * @return
  */
-int WhatsappServer::createGroup()
+void* WhatsappServer::createGroup(std::string& nameOfGroup, std::vector<std::string>& members)
 {
 
 }
