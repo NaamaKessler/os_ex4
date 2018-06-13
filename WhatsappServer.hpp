@@ -30,8 +30,11 @@ public:
     int acceptConnection(); //accepts a client request and opens a socket for their communication.
     int readClient(); // reads msg and parses it according to the protocol
     int writeClient(); // writes msg according to the protocol
-private:
+    int whosConnected(); //returns client names.
+    int exitClient();
     // add - array of connected client sockets ?
+    int createGroup();
+private:
 
     char* myName;
     struct sockaddr_in sa;
