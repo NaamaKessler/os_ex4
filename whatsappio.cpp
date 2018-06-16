@@ -9,6 +9,11 @@ void print_connection() {
     printf("Connected Successfully.\n");
 }
 
+void print_connection_server(const std::string& client) {
+    printf("%s connected.\n", client.c_str());
+}
+
+
 void print_dup_connection() {
     printf("Client name is already in use.\n");
 }

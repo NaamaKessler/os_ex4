@@ -17,6 +17,7 @@
 #include <string.h>
 #include <map>
 #include <set>
+#include <errno.h>
 
 // ------------------------------- constants ------------------------------- //
 #define MAX_NAME_SIZE = 30
@@ -28,26 +29,23 @@
 class WhatsappServer
 {
 public:
-    explicit WhatsappServer(unsigned short portNum); //(initializes class & a listening socket and calls bind() and listen()?)
-    fd_set clientsFds; //add clients here uppon connectino
-    int genSocket; // fd of the general listening socket.
-    int establisConnection(); //accepts a client request and opens a socket for their communication.
-    int readClient(std::string clientName); // reads msg and parses it according to the protocol
-    int getConnenctionsNum();
+    explicit WhatsappServer(unsigned short portNum);
+    fd_set clientsFds;
+    int genSocket;
+    int establisConnection();
+    int readClient(std::string clientName);
     std::map<std::string, int> getClients();
 
-    std::map<std::string, int> connectedClients; //int - Fds of the sockets.
+    std::map<std::string, int> connectedClients;
 
 private:
     char myName[31];
     struct sockaddr_in sa;
     struct hostent* hp;
     std::map<std::string, std::set<int>> groups;
-    std::map<std::string, void* (*)(void*)> commandInterpreter; //links protocol to actual functions
-    int initSocket(); //creates a new socket
-    int writeClient(std::string& destName, std::string& messsage); // writes msg to client according to the protocol
-    int whosConnected(); //returns client names.
-    void* createGroup(std::string& nameOfGroup, std::vector<std::string>& members);
+    int writeClient(std::string& originName, std::string& destName, std::string& message);
+    int whosConnected();
+    void* createGroup(std::string& clientName, std::string& nameOfGroup, std::vector<std::string>& members);
     int exitClient(std::string& name);
 };
 

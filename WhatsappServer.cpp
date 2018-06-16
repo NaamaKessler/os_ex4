@@ -10,14 +10,14 @@
 WhatsappServer::WhatsappServer(unsigned short portNum)
 {
     // init hostent
-    if (gethostname(this->myName, 30) == -1) // macro raises error
+    if (gethostname(this->myName, 30) == -1) // macro raises error -?
     {
-        //error
+        print_error("gethostname", errno);
     }
     this->hp = gethostbyname(this->myName);
     if (!this->hp)
     {
-        //error
+        print_error("gethostbyname", errno);
     }
 
     // init sockets address
@@ -29,31 +29,42 @@ WhatsappServer::WhatsappServer(unsigned short portNum)
     // init and bind listening socket
     if ((this->genSocket = socket(AF_INET, SOCK_STREAM, 0) < 0))
     {
-        //error
+        print_error("socket", errno);
     }
     if (bind(this->genSocket, (struct sockaddr*)&this->sa, sizeof (struct sockaddr_in)) < 0)
     {
-        //error
+        print_error("bind", errno);
         close(this->genSocket);
     }
 
-    listen(this->sa.sin_port, 10); //ok?
+    listen(this->sa.sin_port, 10);
 }
 
 /**
  * Accepts a connection request and opens a socket for communication with the client.
  * @return
  */
-int WhatsappServer::establisConnection()
+int WhatsappServer::establisConnection() //todo - how do i get the client's name?
 {
-
+    int newSockFd = accept(this->genSocket, nullptr, nullptr);
+    if (newSockFd == -1)
+    {
+        //error
+        print_fail_connection();
+        return 1;
+    }
+    else
+    {
+        // todo- add to clients map in the server + get it's name
+//        print_connection_server();
+    }
 }
 
 /**
  * Reads messages from the client and carries them out.
  * @return
  */
-int WhatsappServer::readClient(std::string clientName) // fd or name? who calls it?
+int WhatsappServer::readClient(std::string clientName)
 {
     int clientFd = this->connectedClients[clientName];
     // read message from buffer
@@ -61,7 +72,6 @@ int WhatsappServer::readClient(std::string clientName) // fd or name? who calls 
     memset(buf, '\0', 257);
     int byteCount = 0;
     int byteRead = 0;
-
     while (byteCount < 256)
     {
         byteRead = (int)read(clientFd, buf, (size_t)256-byteCount);
@@ -72,7 +82,7 @@ int WhatsappServer::readClient(std::string clientName) // fd or name? who calls 
         }
         if (byteRead < 1)
         {
-            //error
+            print_error("read", errno);
         }
     }
 
@@ -89,7 +99,7 @@ int WhatsappServer::readClient(std::string clientName) // fd or name? who calls 
             createGroup(name, clients); //todo - does 'clients' includes the sender's name?
             break;
         case SEND:
-            writeClient(name, messsage);
+            writeClient(clientName, name, messsage);
             break;
         case WHO:
             whosConnected();
@@ -107,14 +117,14 @@ int WhatsappServer::readClient(std::string clientName) // fd or name? who calls 
  * Writes message to the client.
  * @return
  */
-int WhatsappServer::writeClient(std::string& destName, std::string& message)
+int WhatsappServer::writeClient(std::string& originName, std::string& destName, std::string& message)
 {
     // verify that the client exists:
-    if (this->connectedClients.find(destName) == this->connectedClients.end()) //what happens if map is empty?
+    if (this->connectedClients.empty() ||
+            this->connectedClients.find(destName) == this->connectedClients.end())
     {
-        //error
+        print_send(true, false, originName, destName, message);
     }
-
     int byteCount = 0;
     int byteWritten = 0;
     while (byteCount < 256)
@@ -127,7 +137,7 @@ int WhatsappServer::writeClient(std::string& destName, std::string& message)
         }
         else
         {
-            //error
+            print_error("write", errno);
         }
     }
 }
@@ -160,9 +170,10 @@ int WhatsappServer::exitClient(std::string& name)
  * Removes a client from a group.
  * @return
  */
-void* WhatsappServer::createGroup(std::string& nameOfGroup, std::vector<std::string>& members) //todo - is the client part of the list?
+void* WhatsappServer::createGroup(std::string& clientName, std::string& nameOfGroup,
+                                  std::vector<std::string>& members)
+//todo - is the client part of the list?
 {
-    // todo - how do i get client's name?
     if ((this->groups.find(nameOfGroup) == this->groups.end()) &&
             (this->connectedClients.find(nameOfGroup) == this->connectedClients.end()))
     {
@@ -184,6 +195,7 @@ void* WhatsappServer::createGroup(std::string& nameOfGroup, std::vector<std::str
                 return nullptr;
             }
         }
+        this->groups[nameOfGroup].insert(this->connectedClients[clientName]);
         std::cout << members[0] << ": Group \"" <<  nameOfGroup <<
                   " \" was created successfully." << std::endl;
     }
@@ -195,24 +207,20 @@ void* WhatsappServer::createGroup(std::string& nameOfGroup, std::vector<std::str
     }
 } //todo - when adding to a group, do we eant to save for each client all the groups he belongs to?
 
-/**
- * initializes a socket.
- * @return fd of the new socket.
- */
-int WhatsappServer::initSocket()
+std::map<std::string, int> WhatsappServer::getClients()
 {
-
+    return this->connectedClients;
 }
 
 
-int main (int argc, char *argv[]) {
+int main (int argc, char *argv[])
+{
     if (argc != 2) {
-        //error
+        print_server_usage();
     }
     try {
         auto portNum = (unsigned short) std::stoi(argv[1]);
-        auto server = new WhatsappServer(portNum); // already listens
-
+        auto server = new WhatsappServer(portNum);
         bool exit = false;
         fd_set readFds;
         FD_ZERO(&readFds);
@@ -222,7 +230,7 @@ int main (int argc, char *argv[]) {
         {
             readFds = server->clientsFds;
             if (select(MAX_CLIENTS_NUM +1, &readFds, nullptr, nullptr, nullptr) == -1) {
-                //error
+                print_error("select", errno);
             }
 
             if (FD_ISSET(server->genSocket, &readFds)) {
@@ -236,6 +244,7 @@ int main (int argc, char *argv[]) {
                 if (strcmp(inputLine, "EXIT"))
                 {
                     exit = true;
+                    print_exit();
                 }
             }
 
@@ -248,15 +257,12 @@ int main (int argc, char *argv[]) {
             }
         }
     }
-    catch (std::invalid_argument &e) {
-        //error
+    catch (std::invalid_argument &e)
+    {
         print_server_usage();
         exit(1); //todo - ok?
     }
 }
 
-    std::map<std::string, int> WhatsappServer::getClients()
-    {
-        return this->connectedClients;
-    }
+
 

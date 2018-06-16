@@ -19,10 +19,17 @@ enum command_type {CREATE_GROUP, SEND, WHO, EXIT, INVALID};
 void print_exit();
 
 /*
- * Description: Prints to the screen a message when the client establish
- * connection to the server
+ * Description: Prints to the screen a message when the client established
+ * connection to the server, in the client
 */
 void print_connection();
+
+/*
+ * Description: Prints to the screen a message when the client established
+ * connection to the server, in the server
+ * client: Name of the sender
+*/
+void print_connection_server(const std::string& client);
 
 /*
  * Description: Prints to the screen a message when the client tries to
