@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <map>
+#include <set>
 
 // ------------------------------- constants ------------------------------- //
 #define MAX_NAME_SIZE = 30
@@ -28,19 +29,22 @@ class WhatsappServer
 {
 public:
     explicit WhatsappServer(unsigned short portNum); //(initializes class & a listening socket and calls bind() and listen()?)
+    fd_set clientsFds; //add clients here uppon connectino
+    int genSocket; // fd of the general listening socket.
+    int establisConnection(); //accepts a client request and opens a socket for their communication.
+    int readClient(std::string clientName); // reads msg and parses it according to the protocol
+    int getConnenctionsNum();
+    std::map<std::string, int> getClients();
+
+    std::map<std::string, int> connectedClients; //int - Fds of the sockets.
+
 private:
     char myName[31];
     struct sockaddr_in sa;
-
     struct hostent* hp;
-    int genSocket; // fd of the general listening socket.
-    std::map<std::string, int> connectedClients; //int - Fds of the sockets.
-//    int* clientsFds;
-    std::map<std::string, int> groups;
+    std::map<std::string, std::set<int>> groups;
     std::map<std::string, void* (*)(void*)> commandInterpreter; //links protocol to actual functions
     int initSocket(); //creates a new socket
-    int acceptConnection(); //accepts a client request and opens a socket for their communication.
-    int readClient(int fd); // reads msg and parses it according to the protocol
     int writeClient(std::string& destName, std::string& messsage); // writes msg to client according to the protocol
     int whosConnected(); //returns client names.
     void* createGroup(std::string& nameOfGroup, std::vector<std::string>& members);
