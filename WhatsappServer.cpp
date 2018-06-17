@@ -49,7 +49,7 @@ WhatsappServer::WhatsappServer(unsigned short portNum)
 /**
  * Accepts a connection request and opens a socket for communication with the client.
  */
-int WhatsappServer::establisConnection() //todo - how do i get the client's name?
+int WhatsappServer::establishConnection() //todo - how do i get the client's name?
 {
     int newSockFd = accept(this->listeningSocket, nullptr, nullptr);
     if (newSockFd < 0)
@@ -264,7 +264,7 @@ int main (int argc, char *argv[])
             }
 
             if (FD_ISSET(server->listeningSocket, &readFds)) { // someone tried to connect (using the listening socket)
-                server->establisConnection();
+                server->establishConnection();
             }
             if (FD_ISSET(STDIN_FILENO, &readFds)) {
                 // todo - handle terminal input - exit and anything else?
@@ -285,6 +285,7 @@ int main (int argc, char *argv[])
                 }
             }
         }
+        close(server->listeningSocket);
         delete server;
     }
     catch (std::invalid_argument &e)

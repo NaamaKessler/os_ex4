@@ -39,7 +39,7 @@ public:
     /**
     * Accepts a connection request and opens a socket for communication with the client.
     */
-    int establisConnection();
+    int establishConnection();
 
     /**
     * Reads messages from the client and carries them out.
