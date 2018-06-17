@@ -14,7 +14,6 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <string>
-#include <bits/unordered_set.h>
 #include <set>
 #include <regex>
 
@@ -41,14 +40,30 @@ public:
     int readFromServer(); //needed?
     int writeToServer(std::string msg); //needed? (writea according to the protocol)
     int getSocketHandle();
+    const std::string getClientName();
+    const int isGroupMember(std::string& groupName);
+    const int isReceiverNotMe(std::string& receiver);
+    int validateName(const std::string& name);
+    int validateGroup(const std::string& name, const std::vector<std::string>& clients);
+    int validateSend(std::string& receiver);
+    int setLastCommand(command_type command);
+    command_type getLastCommand();
+    int clientOutput(command_type commandT, std::string name, std::vector<std::string> clients,
+                     bool success);
 private:
-    char myName[MAX_NAME_SIZE+1];
+//    char myName[MAX_NAME_SIZE+1];
+    std::string myName;
     struct sockaddr_in sa;
     struct hostent *hp;
     int socketHandle;
-    std::unordered_set<std::string> groups; // do we need map?
-    char* readBuffer;
-    char* writeBuffer;
+    std::vector<std::string> groups = {};
+    command_type lastCommand;
+    std::string lastName;
+    std::vector<std::string> lastClients;
+    bool successFromServer;
+    bool isLastInnerMsg;
+//    char* readBuffer;
+//    char* writeBuffer;
 
 };
 
