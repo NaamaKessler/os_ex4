@@ -29,23 +29,59 @@
 class WhatsappServer
 {
 public:
-    explicit WhatsappServer(unsigned short portNum);
-    fd_set clientsFds;
-    int genSocket;
-    int establisConnection();
-    int readClient(std::string clientName);
-    std::map<std::string, int> getClients();
+    int listeningSocket;
 
-    std::map<std::string, int> connectedClients;
+    /**
+    * initializes the server and opens a general requests socket.
+    */
+    explicit WhatsappServer(unsigned short portNum);
+
+    /**
+    * Accepts a connection request and opens a socket for communication with the client.
+    */
+    int establisConnection();
+
+    /**
+    * Reads messages from the client and carries them out.
+    * @return
+    */
+    int readClient(std::string clientName);
+
+    /**
+    * Return the map of clients and their Fds.
+    * @return
+    */
+    const std::map<std::string, int> getClients() const;
 
 private:
     char myName[31];
     struct sockaddr_in sa;
     struct hostent* hp;
+    std::map<std::string, int> connectedClients;
     std::map<std::string, std::set<int>> groups;
-    int writeClient(std::string& originName, std::string& destName, std::string& message);
+
+    /**
+    * Creates a group of clients.
+    * @return
+    */
+    int createGroup(std::string& clientName, std::string& groupName,
+                      std::vector<std::string>& members);
+
+    /**
+    * Sends message from one client to the another.
+    * @return
+    */
+    int sendMessage(std::string &originName, std::string &destName, std::string &message);
+
+    /**
+    * @return a list containing all connected clients names.
+    */
     int whosConnected();
-    void* createGroup(std::string& clientName, std::string& nameOfGroup, std::vector<std::string>& members);
+
+    /**
+    * Executes exit request of the client.
+    * @return
+    */
     int exitClient(std::string& name);
 };
 

@@ -2,8 +2,11 @@
 // Created by Naama on 6/12/2018.
 //
 
+// ------------------------------- includes ------------------------------- //
 #include "WhatsappServer.hpp"
 
+
+// ------------------------------- public methods ------------------------------- //
 /**
  * initializes the server and opens a general requests socket.
  */
@@ -27,29 +30,30 @@ WhatsappServer::WhatsappServer(unsigned short portNum)
     sa.sin_port = htons(portNum);
 
     // init and bind listening socket
-    if ((this->genSocket = socket(AF_INET, SOCK_STREAM, 0) < 0))
+    if ((this->listeningSocket = socket(AF_INET, SOCK_STREAM, 0) < 0))
     {
         print_error("socket", errno);
     }
-    if (bind(this->genSocket, (struct sockaddr*)&this->sa, sizeof (struct sockaddr_in)) < 0)
+    if (bind(this->listeningSocket, (struct sockaddr*)&this->sa, sizeof (struct sockaddr_in)) < 0)
     {
         print_error("bind", errno);
-        close(this->genSocket);
+        close(this->listeningSocket);
     }
 
-    listen(this->sa.sin_port, 10);
+    if (listen(this->sa.sin_port, 10) < 0)
+    {
+        print_error("listen", errno);
+    }
 }
 
 /**
  * Accepts a connection request and opens a socket for communication with the client.
- * @return
  */
 int WhatsappServer::establisConnection() //todo - how do i get the client's name?
 {
-    int newSockFd = accept(this->genSocket, nullptr, nullptr);
-    if (newSockFd == -1)
+    int newSockFd = accept(this->listeningSocket, nullptr, nullptr);
+    if (newSockFd < 0)
     {
-        //error
         print_fail_connection();
         return 1;
     }
@@ -57,6 +61,7 @@ int WhatsappServer::establisConnection() //todo - how do i get the client's name
     {
         // todo- add to clients map in the server + get it's name
 //        print_connection_server();
+        return 0;
     }
 }
 
@@ -67,7 +72,6 @@ int WhatsappServer::establisConnection() //todo - how do i get the client's name
 int WhatsappServer::readClient(std::string clientName)
 {
     int clientFd = this->connectedClients[clientName];
-    // read message from buffer
     auto buf = new char[257];
     memset(buf, '\0', 257);
     int byteCount = 0;
@@ -83,6 +87,7 @@ int WhatsappServer::readClient(std::string clientName)
         if (byteRead < 1)
         {
             print_error("read", errno);
+            return 1;
         }
     }
 
@@ -96,10 +101,10 @@ int WhatsappServer::readClient(std::string clientName)
     switch (commandT)
     {
         case CREATE_GROUP:
-            createGroup(name, clients); //todo - does 'clients' includes the sender's name?
+            createGroup(clientName, name, clients);
             break;
         case SEND:
-            writeClient(clientName, name, messsage);
+            sendMessage(clientName, name, messsage);
             break;
         case WHO:
             whosConnected();
@@ -111,26 +116,77 @@ int WhatsappServer::readClient(std::string clientName)
             break;
     }
     delete buf;
+    return 0;
 }
 
 /**
- * Writes message to the client.
+ * Returns the map of clients and their Fds.
  * @return
  */
-int WhatsappServer::writeClient(std::string& originName, std::string& destName, std::string& message)
+const std::map<std::string, int> WhatsappServer::getClients() const
+{
+    return this->connectedClients;
+}
+
+/**
+ * Creates a group of clients.
+ * @return
+ */
+int WhatsappServer::createGroup(std::string& clientName, std::string& groupName,
+                                  std::vector<std::string>& members)
+{
+    if ((this->groups.find(groupName) == this->groups.end()) &&
+        (this->connectedClients.find(groupName) == this->connectedClients.end()))
+    {
+        // groupName is unique
+        this->groups[groupName]; //initialization of set is ok?
+        for (std::string& member : members)
+        {
+            if ((this->connectedClients.find(member) != this->connectedClients.end())) //the client exists
+            {
+                this->groups[groupName].insert(this->connectedClients[member]);
+                // set ensures that no member will be inserted twice.
+            }
+            else
+            {
+                print_create_group(true, false, clientName, groupName);
+                this->groups.erase(groupName);
+                return 1;
+            }
+        }
+        this->groups[groupName].insert(this->connectedClients[clientName]); //add creator to group
+        print_create_group(true, true, clientName, groupName);
+        return 0;
+    }
+    else  // group name already exists
+    {
+        print_create_group(true, false, clientName, groupName);
+        return 1;
+    }
+}
+
+
+// ------------------------------- private methods ------------------------------- //
+/**
+ * Sends message fron one client to the another.
+ * @return
+ */
+int WhatsappServer::sendMessage(std::string &originName, std::string &destName,
+                                std::string &message)
 {
     // verify that the client exists:
     if (this->connectedClients.empty() ||
             this->connectedClients.find(destName) == this->connectedClients.end())
     {
         print_send(true, false, originName, destName, message);
+        return 1;
     }
     int byteCount = 0;
     int byteWritten = 0;
     while (byteCount < 256)
     {
         byteWritten = (int)write(this->connectedClients.at(destName),
-                                 message.c_str() + byteWritten, (size_t)256-byteCount); // ok?
+                                 message.c_str() + byteWritten, (size_t)256-byteCount);
         if (byteWritten > 0)
         {
             byteCount += byteWritten;
@@ -138,8 +194,11 @@ int WhatsappServer::writeClient(std::string& originName, std::string& destName, 
         else
         {
             print_error("write", errno);
+            return 1;
         }
     }
+    print_message(originName, message);
+    return 0;
 }
 
 /**
@@ -155,67 +214,32 @@ int WhatsappServer::whosConnected()
     }
     print_who_server(clientsNames);
     delete clientsNames;
+    return 0;
 }
 
 /**
  * Executes exit request of the client.
  * @return
  */
-int WhatsappServer::exitClient(std::string& name)
+int WhatsappServer::exitClient(std::string& clientName)
 {
-
+    int clientFd = this->connectedClients[clientName];
+    this->connectedClients.erase(clientName);
+    for (const std::pair<const std::string, std::set<int>>& group: this->groups)
+    {
+        group.second.erase(clientFd);
+    }
+    print_exit(true, clientName);
+    return 0;
 }
 
-/**
- * Removes a client from a group.
- * @return
- */
-void* WhatsappServer::createGroup(std::string& clientName, std::string& nameOfGroup,
-                                  std::vector<std::string>& members)
-//todo - is the client part of the list?
-{
-    if ((this->groups.find(nameOfGroup) == this->groups.end()) &&
-            (this->connectedClients.find(nameOfGroup) == this->connectedClients.end()))
-    {
-        // groupName is unique
-        this->groups[nameOfGroup]; //initialization of set is ok?
-        for (std::string& member : members)
-        {
-            if ((this->connectedClients.find(member) != this->connectedClients.end())) //the client exists
-            {
-                this->groups[nameOfGroup].insert(this->connectedClients[member]);
-                // set ensures that no member will be inserted twice.
-            }
-            else
-            {
-                //todo - invalid member name - delete group?
-                std::cout << members[0] << ": ERROR: failed to create group \""
-                          << nameOfGroup <<"\"." << std::endl;
-                this->groups.erase(nameOfGroup);
-                return nullptr;
-            }
-        }
-        this->groups[nameOfGroup].insert(this->connectedClients[clientName]);
-        std::cout << members[0] << ": Group \"" <<  nameOfGroup <<
-                  " \" was created successfully." << std::endl;
-    }
-    else
-    {
-        // group name already exists
-        std::cout << members[0] << ": ERROR: failed to create group \""
-                  << nameOfGroup <<"\"." << std::endl;
-    }
-} //todo - when adding to a group, do we eant to save for each client all the groups he belongs to?
 
-std::map<std::string, int> WhatsappServer::getClients()
-{
-    return this->connectedClients;
-}
-
+// ------------------------------- server main ------------------------------- //
 
 int main (int argc, char *argv[])
 {
-    if (argc != 2) {
+    if (argc != 2)
+    {
         print_server_usage();
     }
     try {
@@ -223,18 +247,23 @@ int main (int argc, char *argv[])
         auto server = new WhatsappServer(portNum);
         bool exit = false;
         fd_set readFds;
-        FD_ZERO(&readFds);
-        FD_SET(server->genSocket, &readFds);
-        FD_SET(STDIN_FILENO, &readFds);
+
         while (!exit)
         {
-            readFds = server->clientsFds;
+            // add all Fds to fd_set:
+            FD_ZERO(&readFds);
+            FD_SET(server->listeningSocket, &readFds);
+            FD_SET(STDIN_FILENO, &readFds);
+            for (const std::pair<const std::string, int>& client: server->getClients())
+            {
+                FD_SET(client.second, &readFds);
+            }
+
             if (select(MAX_CLIENTS_NUM +1, &readFds, nullptr, nullptr, nullptr) == -1) {
                 print_error("select", errno);
             }
 
-            if (FD_ISSET(server->genSocket, &readFds)) {
-                // someone tried to connect (using the listening socket)
+            if (FD_ISSET(server->listeningSocket, &readFds)) { // someone tried to connect (using the listening socket)
                 server->establisConnection();
             }
             if (FD_ISSET(STDIN_FILENO, &readFds)) {
@@ -248,7 +277,7 @@ int main (int argc, char *argv[])
                 }
             }
 
-            for (std::pair<std::string, int>& client: server->getClients())
+            for (const std::pair<const std::string, int>& client: server->getClients())
             {
                 if (FD_ISSET(client.second, &readFds))
                 {
@@ -256,6 +285,7 @@ int main (int argc, char *argv[])
                 }
             }
         }
+        delete server;
     }
     catch (std::invalid_argument &e)
     {
