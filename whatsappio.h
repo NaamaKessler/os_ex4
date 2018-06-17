@@ -10,7 +10,7 @@
 #define WA_MAX_GROUP 50
 #define WA_MAX_INPUT ((WA_MAX_NAME+1)*(WA_MAX_GROUP+2))
 
-enum command_type {CREATE_GROUP, SEND, WHO, EXIT, INVALID, NAME};
+enum command_type {CREATE_GROUP, SEND, WHO, EXIT, INVALID, NAME, SERVER_CRASH};
 // NAME: name <name>
 
 /*

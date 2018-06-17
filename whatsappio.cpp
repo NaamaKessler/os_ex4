@@ -156,6 +156,8 @@ void parse_command(const std::string& command, command_type& commandT,
         {
             name = s;
         }
+    } else if(!strcmp(s, "-1")) {
+        commandT = SERVER_CRASH;
     } else {
         commandT = INVALID;
     }
