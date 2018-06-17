@@ -10,7 +10,8 @@
 #define WA_MAX_GROUP 50
 #define WA_MAX_INPUT ((WA_MAX_NAME+1)*(WA_MAX_GROUP+2))
 
-enum command_type {CREATE_GROUP, SEND, WHO, EXIT, INVALID};
+enum command_type {CREATE_GROUP, SEND, WHO, EXIT, INVALID, NAME};
+// NAME: name <name>
 
 /*
  * Description: Prints to the screen a message when the user terminate the
