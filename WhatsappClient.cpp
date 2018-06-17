@@ -238,28 +238,24 @@ int WhatsappClient::readFromServer()
     {
         return -1;
     }
-    if (isLastInnerMsg){ // enter here only if it got 0/-1
-
-        clientOutput(lastCommand, lastName, lastClients, successFromServer);
-        isLastInnerMsg = false;
-    }
-
+    
     delete readBuffer;
     return totalBytesRead;
 }
 
-int WhatsappClient::clientOutput(command_type commandT, std::string name, std::vector<std::string> clients,
-                                 bool success){
-    switch (commandT){
+//int WhatsappClient::clientOutput(command_type commandT, std::string name, std::vector<std::string> clients,
+//                                 bool success){
+int WhatsappClient::clientOutput(){
+    switch (lastCommand){
 
         case CREATE_GROUP:
-            print_create_group(false, success, nullptr, name);
+            print_create_group(false, successFromServer, nullptr, lastName);
             break;
         case SEND:
-            print_send(false, success, nullptr, nullptr, nullptr);
+            print_send(false, successFromServer, nullptr, nullptr, nullptr);
             break;
         case WHO:
-            print_who_client(success, clients);
+            print_who_client(successFromServer, lastClients);
             break;
         case NAME: // just connected
             // handled in init - prints connection msg
@@ -362,7 +358,13 @@ int main(int argc, char* argv[]){
         {
             if (FD_ISSET(whatsappClient.getSocketHandle(), &rfds)) // from server
             {
-                whatsappClient.readFromServer(); // calls parseMsg
+                if (whatsappClient.readFromServer() != -1){ // calls parseMsg
+                    if (whatsappClient.isLastInnerMsg){ // enter here only if it got 0/-1
+
+                        whatsappClient.clientOutput();
+                        whatsappClient.isLastInnerMsg = false;
+                    }
+                } // calls parseMsg
             }
             if (FD_ISSET(STDIN_FILENO, &rfds))
             { // from stdin

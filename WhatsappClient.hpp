@@ -48,8 +48,8 @@ public:
     int validateSend(std::string& receiver);
     int setLastCommand(command_type command);
     command_type getLastCommand();
-    int clientOutput(command_type commandT, std::string name, std::vector<std::string> clients,
-                     bool success);
+    int clientOutput();
+    bool isLastInnerMsg;
 private:
 //    char myName[MAX_NAME_SIZE+1];
     std::string myName;
@@ -61,7 +61,6 @@ private:
     std::string lastName;
     std::vector<std::string> lastClients;
     bool successFromServer;
-    bool isLastInnerMsg;
 //    char* readBuffer;
 //    char* writeBuffer;
 
