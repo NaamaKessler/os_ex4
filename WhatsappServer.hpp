@@ -58,7 +58,12 @@ public:
     * Return the map of clients and their Fds.
     * @return
     */
-    const std::map<std::string, int> getClients() const;
+    std::map<std::string, int> getClients();
+
+    /**
+    * Signals to client that the server has crashed / got an EXIT command.
+    */
+    void signalExit(int clientFd);
 
 private:
     char myName[31];
@@ -106,10 +111,7 @@ private:
      */
     void echoClient(int clientFd, int success);
 
-    /**
-     * Signals to client that the server has crashed / got an EXIT command.
-     */
-    void signalExit(int clientFd);
+
 };
 
 #endif //OS_EX4_WHATSAPPSERVER_HPP

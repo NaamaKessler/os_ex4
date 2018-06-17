@@ -14,12 +14,12 @@ int validatePort(char* port, unsigned short* portNum);
 // -- initial validations --
 
 int validateAddress(char *hostname){
-    std::regex ipTemplate("(\\d{1,3}\\.){3}(\\d{1,3})");
-    if (std::regex_match(hostname, ipTemplate) != 0)
+    std::regex ipTemplate("(\\d{1,3}.){3}(\\d{1,3})");
+    if (std::regex_match(hostname, ipTemplate))
     {
-        return -1;
-    } else {
         return 0;
+    } else {
+        return -1;
     }
 }
 
@@ -29,7 +29,7 @@ int validatePort(char* port, unsigned short* portNum){
     std::string strPort = std::string(port);
     // check if digits
     for (char &c : strPort){
-        if (isdigit(c) != 0)
+        if (isdigit(c) == 0)
         {
             return -1;
         }
@@ -41,6 +41,7 @@ int validatePort(char* port, unsigned short* portNum){
     }
 
     *portNum = (unsigned short) intPort;
+    std::cout << "portnum: " << *portNum << std::endl;
     return 0;
 }
 
@@ -73,15 +74,15 @@ int WhatsappClient::validateSend(std::string& receiver){
     return isReceiverNotMe(receiver);
 }
 
-const int WhatsappClient::isGroupMember(std::string& groupName)
-{
-    // should check when sending to group but doesn't know if it's a group/client name on send
-    return std::find(groups.begin(), groups.end(), groupName) != groups.end();
-}
+//const int WhatsappClient::isGroupMember(std::string& groupName)
+//{
+//    // should check when sending to group but doesn't know if it's a group/client name on send
+//    return std::find(groups.begin(), groups.end(), groupName) != groups.end();
+//}
 
-const int WhatsappClient::isReceiverNotMe(std::string& receiver){
+int WhatsappClient::isReceiverNotMe(std::string& receiver){
 //    if (strcmp(receiver, getClientName()) != 0){
-    if (receiver.compare(getClientName()) != 0){
+    if (receiver == getClientName()){
         return -1;
     }
     return 0;
@@ -96,10 +97,12 @@ WhatsappClient::WhatsappClient(char* clientName, char* serverAddress, char* serv
     unsigned short portNum;
     this->myName = clientName;
     if ((validateAddress(serverAddress)) != 0){
+        std::cout << "invalid address" << std::endl;
         exit(1);
     }
 
     if ((validatePort(serverPort, &portNum)) != 0){
+        std::cout << "invalid portNum" << std::endl;
         exit(1);
     }
 
@@ -147,21 +150,24 @@ int WhatsappClient::connectToServer(char *hostname, unsigned short portnum)
     sa.sin_family = (sa_family_t) hp->h_addrtype;
     sa.sin_port = htons(portnum);
 
+    std::cout << "server address: " << hp->h_addr << std::endl;
+    std::cout << "server port: " << sa.sin_port << std::endl;
+
     // socket
     if ((socketHandle = socket(hp->h_addrtype, SOCK_STREAM, 0)) < 0)
     {
-        print_error("callSocket", errno);
+        print_error("callSocket+++", errno);
         return -1;
     }
 
     // connect
     if (connect(socketHandle, (struct sockaddr *) &sa, sizeof(sa)) < 0)
     {
-        print_error("callSocket", errno);
+        print_error("callSocket~~~", errno);
         close(socketHandle);
         return -1;
     }
-
+    return 0;
 }
 
 int WhatsappClient::parseMsg(std::string msg) //parses the message and calls relevant methods for execution.
@@ -177,7 +183,7 @@ int WhatsappClient::parseMsg(std::string msg) //parses the message and calls rel
     lastClients = clients;
     if (msg == "0" || msg == "1"){
         isLastInnerMsg = true;
-        successFromServer = atoi(msg);
+        successFromServer = (bool) atoi(msg.c_str());
         return 0;
     }
     switch (commandT){
@@ -238,7 +244,7 @@ int WhatsappClient::readFromServer()
     {
         return -1;
     }
-    
+
     delete readBuffer;
     return totalBytesRead;
 }
@@ -313,12 +319,13 @@ int WhatsappClient::writeToServer(std::string msg) //needed? (writea according t
 
 int main(int argc, char* argv[]){
     fd_set rfds;
-    struct timeval tv;
+//    struct timeval tv;
     int retval;
-    bool exit = false;
+    bool exitFlag = false;
 
     // usage error:
     if (argc != NUM_OF_ARGS){
+        std::cout << "hi" << std::endl;
         print_client_usage();
         // exit
         exit(1);
@@ -333,23 +340,23 @@ int main(int argc, char* argv[]){
     // wait for input
     std::string inputLine;
 
-    while (!exit){ // change condition //todo
+    while (!exitFlag){ // change condition //todo
         FD_ZERO(&rfds);
         FD_SET(STDIN_FILENO, &rfds);
         FD_SET(whatsappClient.getSocketHandle(), &rfds);
         // get input from user
         getline(std::cin, inputLine);
-//        if (strcmp(inputLine, "EXIT") >= 0 || strcmp(inputLine, "exit") >= 0)
+//        if (strcmp(inputLine, "EXIT") >= 0 || strcmp(inputLine, "exitFlag") >= 0)
         if ((inputLine == "exit") || (inputLine == "EXIT"))
         {
             // either equal or the first character that does not match has a greater value in inputLine
             // than in "EXIT"
-            exit = true;
+            exitFlag = true;
         }
 
         // needs to get success message from the server - so it can print a success message
 
-        retval = select(2, &rfds, nullptr, nullptr, nullptr);
+        retval = select(whatsappClient.getSocketHandle()+1, &rfds, nullptr, nullptr, nullptr);
         if (retval == -1)
         {
             //error

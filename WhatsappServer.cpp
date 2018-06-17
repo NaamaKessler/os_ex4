@@ -24,23 +24,24 @@ WhatsappServer::WhatsappServer(unsigned short portNum)
     }
 
     // init sockets address
-    memset(&this->sa, 0, sizeof(struct sockadder_in));
+    memset(&this->sa, 0, sizeof(this->sa));
     sa.sin_family = (sa_family_t)hp->h_addrtype;
     memcpy(&sa.sin_addr, hp->h_addr, (size_t)hp->h_length);
     sa.sin_port = htons(portNum);
 
     // init and bind listening socket
-    if ((this->listeningSocket = socket(AF_INET, SOCK_STREAM, 0) < 0))
+    if (((this->listeningSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0))
     {
         print_error("socket", errno);
     }
+
     if (bind(this->listeningSocket, (struct sockaddr*)&this->sa, sizeof (struct sockaddr_in)) < 0)
     {
         print_error("bind", errno);
         close(this->listeningSocket);
     }
 
-    if (listen(this->sa.sin_port, 10) < 0)
+    if (listen(this->listeningSocket, 10) < 0)
     {
         print_error("listen", errno);
     }
@@ -61,8 +62,9 @@ WhatsappServer::~WhatsappServer()
 /**
  * Accepts a connection request and opens a socket for communication with the client.
  */
-int WhatsappServer::establishConnection() //todo - how do i get the client's name?
+int WhatsappServer::establishConnection()
 {
+    std::cout << "in establishConnection" << std::endl;
     int newSockFd = accept(this->listeningSocket, nullptr, nullptr);
     if (newSockFd < 0)
     {
@@ -109,7 +111,7 @@ void WhatsappServer::readClient(std::string clientName)
     std::vector<std::string> clients;
     parse_command(buf, commandT, name, messsage, clients);
 
-    int success;
+    int success = 0;
     switch (commandT)
     {
         case CREATE_GROUP:
@@ -137,7 +139,7 @@ void WhatsappServer::readClient(std::string clientName)
  * Returns the map of clients and their Fds.
  * @return
  */
-const std::map<std::string, int> WhatsappServer::getClients() const
+std::map<std::string, int> WhatsappServer::getClients()
 {
     return this->connectedClients;
 }
@@ -224,7 +226,7 @@ int WhatsappServer::whosConnected()
     memset(clientsNames, '\0', (30*this->connectedClients.size()) + 1);
     for (const auto& pair: this->connectedClients)
     {
-        memcpy(clientsNames, pair.first, sizeof(char)*pair.first.length());
+        memcpy(clientsNames, (pair.first).c_str(), pair.first.length());
     }
     print_who_server(clientsNames);
     delete clientsNames;
@@ -239,7 +241,7 @@ int WhatsappServer::exitClient(std::string& clientName)
 {
     int clientFd = this->connectedClients[clientName];
     this->connectedClients.erase(clientName);
-    for (const std::pair<const std::string, std::set<int>>& group: this->groups)
+    for (auto& group: this->groups)
     {
         group.second.erase(clientFd);
     }
@@ -261,11 +263,13 @@ int WhatsappServer::insertName(int clientFd, std::string& name)
     }
 
     // connect fd to name:
-    for (std::pair<std::string, int>& client: this->connectedClients)
+    for (auto& client: this->connectedClients)
     {
         if ((client.first == DEFAULT_CLIENT_NAME) && client.second == clientFd)
         {
-            client.first = name;
+            int fd = client.second;
+            this->connectedClients.erase(client.first);
+            this->connectedClients[name] = fd;
             break;
         }
     }
@@ -280,11 +284,11 @@ int WhatsappServer::insertName(int clientFd, std::string& name)
  */
 void WhatsappServer::echoClient(int clientFd, int success)
 {
-    int byteCount = 0;
-    int byteWritten = 0;
+    unsigned int byteCount = 0;
+    unsigned int byteWritten = 0;
     while (byteCount < sizeof(int))
     {
-        byteWritten = (int)write(clientFd, (char*)success, sizeof(int));
+        byteWritten = (unsigned int)write(clientFd, (char*)(&success), 4);
         if (byteWritten > 0)
         {
             byteCount += byteWritten;
@@ -300,11 +304,11 @@ void WhatsappServer::echoClient(int clientFd, int success)
 /**
  * Signals to client that the server has crashed / got an EXIT command.
  */
-void signalExit(int clientFd)
+void WhatsappServer::signalExit(int clientFd)
 {
     std::string crash_protocol = "server_crash";
-    int byteCount = 0;
-    int byteWritten = 0;
+    unsigned int byteCount = 0;
+    unsigned int byteWritten = 0;
     while (byteCount < sizeof(char)*crash_protocol.length())
     {
         byteWritten = (int)write(clientFd, crash_protocol.c_str() + byteWritten, sizeof(int));
@@ -332,11 +336,23 @@ int main (int argc, char *argv[])
     try {
         auto portNum = (unsigned short) std::stoi(argv[1]);
         auto server = new WhatsappServer(portNum);
-        bool exit = false;
+        bool exitFlag = false;
         fd_set readFds;
 
-        while (!exit)
+        int maxClientFd = server->listeningSocket;
+
+        while (!exitFlag)
         {
+            // find max fd:
+            for (const std::pair<const std::string, int>& client: server->getClients())
+            {
+                if (client.second > maxClientFd)
+                {
+                    maxClientFd = client.second;
+                }
+            }
+//            std::cout << "max fd: " << maxClientFd << std::endl;
+//            std::cout << server->listeningSocket << std::endl;
             // add all Fds to fd_set:
             FD_ZERO(&readFds);
             FD_SET(server->listeningSocket, &readFds);
@@ -346,7 +362,7 @@ int main (int argc, char *argv[])
                 FD_SET(client.second, &readFds);
             }
 
-            if (select(MAX_CLIENTS_NUM +1, &readFds, nullptr, nullptr, nullptr) == -1) {
+            if (select(maxClientFd+1, &readFds, nullptr, nullptr, nullptr) == -1) {
                 print_error("select", errno);
             }
 
@@ -356,9 +372,9 @@ int main (int argc, char *argv[])
             if (FD_ISSET(STDIN_FILENO, &readFds)) {
                 std::string inputLine;
                 getline(std::cin, inputLine);
-                if (strcmp(inputLine, "EXIT"))
+                if (strcmp(inputLine.c_str(), "EXIT") == 0)
                 {
-                    exit = true;
+                    exitFlag = true;
                     print_exit();
                 }
             }
@@ -375,7 +391,7 @@ int main (int argc, char *argv[])
         close(server->listeningSocket);
         for (const std::pair<const std::string, int>& client: server->getClients())
         {
-            signalExit(client.second);
+            server->signalExit(client.second);
         }
         delete server;
         exit(0);

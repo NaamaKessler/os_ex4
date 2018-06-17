@@ -41,8 +41,8 @@ public:
     int writeToServer(std::string msg); //needed? (writea according to the protocol)
     int getSocketHandle();
     const std::string getClientName();
-    const int isGroupMember(std::string& groupName);
-    const int isReceiverNotMe(std::string& receiver);
+//    const int isGroupMember(std::string& groupName);
+    int isReceiverNotMe(std::string& receiver);
     int validateName(const std::string& name);
     int validateGroup(const std::string& name, const std::vector<std::string>& clients);
     int validateSend(std::string& receiver);
