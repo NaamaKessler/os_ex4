@@ -13,7 +13,7 @@
 WhatsappServer::WhatsappServer(unsigned short portNum)
 {
     // init hostent
-    if (gethostname(this->myName, 30) == -1) // macro raises error -?
+    if (gethostname(this->myName, 30) < 0) // macro raises error -?
     {
         print_error("gethostname", errno);
     }
@@ -47,6 +47,18 @@ WhatsappServer::WhatsappServer(unsigned short portNum)
 }
 
 /**
+ * Destructor.
+ */
+WhatsappServer::~WhatsappServer()
+{
+    close(this->listeningSocket);
+    for (const std::pair<const std::string, int>& client: this->connectedClients)
+    {
+        signalExit(client.second);
+    }
+}
+
+/**
  * Accepts a connection request and opens a socket for communication with the client.
  */
 int WhatsappServer::establishConnection() //todo - how do i get the client's name?
@@ -55,13 +67,13 @@ int WhatsappServer::establishConnection() //todo - how do i get the client's nam
     if (newSockFd < 0)
     {
         print_fail_connection();
-        return 1;
+        return 0;
     }
     else
     {
-        // todo- add to clients map in the server + get it's name
-//        print_connection_server();
-        return 0;
+        // insert to Fds map (register to server).
+        this->connectedClients[DEFAULT_CLIENT_NAME] = newSockFd;
+        return 1;
     }
 }
 
@@ -69,7 +81,7 @@ int WhatsappServer::establishConnection() //todo - how do i get the client's nam
  * Reads messages from the client and carries them out.
  * @return
  */
-int WhatsappServer::readClient(std::string clientName)
+void WhatsappServer::readClient(std::string clientName)
 {
     int clientFd = this->connectedClients[clientName];
     auto buf = new char[257];
@@ -87,7 +99,6 @@ int WhatsappServer::readClient(std::string clientName)
         if (byteRead < 1)
         {
             print_error("read", errno);
-            return 1;
         }
     }
 
@@ -98,25 +109,28 @@ int WhatsappServer::readClient(std::string clientName)
     std::vector<std::string> clients;
     parse_command(buf, commandT, name, messsage, clients);
 
+    int success;
     switch (commandT)
     {
         case CREATE_GROUP:
-            createGroup(clientName, name, clients);
+            success = createGroup(clientName, name, clients);
             break;
         case SEND:
-            sendMessage(clientName, name, messsage);
+            success = sendMessage(clientName, name, messsage);
             break;
         case WHO:
-            whosConnected();
+            success = whosConnected();
             break;
         case EXIT:
-            exitClient(name);
+            success = exitClient(name);
             break;
+        case NAME:
+            success = insertName(clientFd, name);
         default: //we won't get here since Client makes sure that the command type is valid.
             break;
     }
+    echoClient(clientFd, success);
     delete buf;
-    return 0;
 }
 
 /**
@@ -151,17 +165,17 @@ int WhatsappServer::createGroup(std::string& clientName, std::string& groupName,
             {
                 print_create_group(true, false, clientName, groupName);
                 this->groups.erase(groupName);
-                return 1;
+                return 0;
             }
         }
         this->groups[groupName].insert(this->connectedClients[clientName]); //add creator to group
         print_create_group(true, true, clientName, groupName);
-        return 0;
+        return 1;
     }
     else  // group name already exists
     {
         print_create_group(true, false, clientName, groupName);
-        return 1;
+        return 0;
     }
 }
 
@@ -194,11 +208,11 @@ int WhatsappServer::sendMessage(std::string &originName, std::string &destName,
         else
         {
             print_error("write", errno);
-            return 1;
+            return 0;
         }
     }
     print_message(originName, message);
-    return 0;
+    return 1;
 }
 
 /**
@@ -214,7 +228,7 @@ int WhatsappServer::whosConnected()
     }
     print_who_server(clientsNames);
     delete clientsNames;
-    return 0;
+    return 1;
 }
 
 /**
@@ -230,7 +244,79 @@ int WhatsappServer::exitClient(std::string& clientName)
         group.second.erase(clientFd);
     }
     print_exit(true, clientName);
-    return 0;
+    return 1;
+}
+
+/**
+ * Receives a new client's name and inserts it in the appropriate pair of this->ConnectedClients
+ * (which currently stores a place-saver).
+ */
+int WhatsappServer::insertName(int clientFd, std::string& name)
+{
+    // make sure name is not in use already:
+    if (this->connectedClients.find(name) != this->connectedClients.end())
+    {
+        print_dup_connection();
+        return 0;
+    }
+
+    // connect fd to name:
+    for (std::pair<std::string, int>& client: this->connectedClients)
+    {
+        if ((client.first == DEFAULT_CLIENT_NAME) && client.second == clientFd)
+        {
+            client.first = name;
+            break;
+        }
+    }
+    print_connection_server(name);
+    return 1;
+}
+
+/**
+ * Signals the client that the request has succeeded/failed.
+ * @param clientFd
+ * @param success
+ */
+void WhatsappServer::echoClient(int clientFd, int success)
+{
+    int byteCount = 0;
+    int byteWritten = 0;
+    while (byteCount < sizeof(int))
+    {
+        byteWritten = (int)write(clientFd, (char*)success, sizeof(int));
+        if (byteWritten > 0)
+        {
+            byteCount += byteWritten;
+        }
+        else
+        {
+            print_error("write", errno);
+        }
+    }
+}
+
+
+/**
+ * Signals to client that the server has crashed / got an EXIT command.
+ */
+void signalExit(int clientFd)
+{
+    std::string crash_protocol = "server_crash";
+    int byteCount = 0;
+    int byteWritten = 0;
+    while (byteCount < sizeof(char)*crash_protocol.length())
+    {
+        byteWritten = (int)write(clientFd, crash_protocol.c_str() + byteWritten, sizeof(int));
+        if (byteWritten > 0)
+        {
+            byteCount += byteWritten;
+        }
+        else
+        {
+            print_error("write", errno);
+        }
+    }
 }
 
 
@@ -241,6 +327,7 @@ int main (int argc, char *argv[])
     if (argc != 2)
     {
         print_server_usage();
+        exit(1);
     }
     try {
         auto portNum = (unsigned short) std::stoi(argv[1]);
@@ -267,7 +354,6 @@ int main (int argc, char *argv[])
                 server->establishConnection();
             }
             if (FD_ISSET(STDIN_FILENO, &readFds)) {
-                // todo - handle terminal input - exit and anything else?
                 std::string inputLine;
                 getline(std::cin, inputLine);
                 if (strcmp(inputLine, "EXIT"))
@@ -285,13 +371,19 @@ int main (int argc, char *argv[])
                 }
             }
         }
+        // clean-ups and exit:
         close(server->listeningSocket);
+        for (const std::pair<const std::string, int>& client: server->getClients())
+        {
+            signalExit(client.second);
+        }
         delete server;
+        exit(0);
     }
     catch (std::invalid_argument &e)
     {
         print_server_usage();
-        exit(1); //todo - ok?
+        exit(1);
     }
 }
 
