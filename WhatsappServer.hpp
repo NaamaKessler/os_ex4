@@ -80,7 +80,7 @@ private:
     * Sends message from one client to the another.
     * @return 1 on success, 0 otherwise.
     */
-    int sendMessage(std::string &originName, const std::string &destName, std::string &message,
+    int sendMessage(command_type command, std::string &originName, const std::string &destName, std::string &message,
                     bool innerMessage);
 
     /**

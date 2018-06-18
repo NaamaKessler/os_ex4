@@ -111,7 +111,6 @@ void WhatsappServer::readClient(std::string clientName)
     std::string messsage;
     std::vector<std::string> clients;
     parse_command((buf-256), commandT, name, messsage, clients);
-    std::string fullMsg = "receiver " + clientName + " " + messsage;
     int success = 0;
     switch (commandT)
     {
@@ -120,7 +119,7 @@ void WhatsappServer::readClient(std::string clientName)
             echoClient(clientName, success);
             break;
         case SEND:
-            success = sendMessage(clientName, name, fullMsg, false);
+            success = sendMessage(SEND, clientName, name, messsage, false);
             echoClient(clientName, success);
             break;
         case WHO:
@@ -193,7 +192,7 @@ int WhatsappServer::createGroup(std::string& clientName, std::string& groupName,
  * Sends message fron one client to the another.
  * @return
  */
-int WhatsappServer::sendMessage(std::string &originName, const std::string &destName,
+int WhatsappServer::sendMessage(command_type command, std::string &originName, const std::string &destName,
                                 std::string &message, bool innerMessage)
 {
     // verify that the client exists:
@@ -207,13 +206,22 @@ int WhatsappServer::sendMessage(std::string &originName, const std::string &dest
         }
         return 1;
     }
+    std::string fullMsg;
 //    std::cout << "message: " << message << std::endl;
+    if (command == SEND)
+    {
+        fullMsg = "receiver " + originName + " " + message;
+    }
+    else
+    {
+        fullMsg = message;
+    }
     int byteCount = 0;
     int byteWritten = 0;
     while (byteCount < 256)
     {
         byteWritten = (int)write(this->connectedClients.at(destName),
-                                 message.c_str() + byteWritten, (size_t)256-byteCount);
+                                 fullMsg.c_str() + byteWritten, (size_t)256-byteCount);
 //        std::cout << "byteWritten: " << byteWritten << std::endl;
         if (byteWritten > 0)
         {
@@ -227,7 +235,7 @@ int WhatsappServer::sendMessage(std::string &originName, const std::string &dest
     }
     if (!innerMessage)
     {
-        print_message(originName, message);
+        print_send(true, true, originName, destName, message);
     }
     return 1;
 }
@@ -254,7 +262,7 @@ int WhatsappServer::whosConnected(std::string& clientName)
         connectedClientsNames += ",";
     }
     connectedClientsNames += clientsNamesVec.back();
-    this->sendMessage(clientName, clientName, connectedClientsNames, true);
+    this->sendMessage(INVALID, clientName, clientName, connectedClientsNames, true);
     print_who_server(clientName);
     return 1;
 }
@@ -325,7 +333,7 @@ void WhatsappServer::echoClient(std::string& clientName, int success)
 //            print_error("write", errno);
 //        }
 //    }
-    this->sendMessage(clientName, clientName, successVal, true);
+    this->sendMessage(INVALID, clientName, clientName, successVal, true);
 }
 
 
@@ -348,7 +356,7 @@ void WhatsappServer::signalExit(const std::string& clientName)
 //        {
 //            print_error("write", errno);
 //        }
-    sendMessage(crash_protocol, clientName, crash_protocol, true);
+    sendMessage(INVALID, crash_protocol, clientName, crash_protocol, true);
 //    }
 }
 

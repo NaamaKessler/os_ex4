@@ -211,8 +211,8 @@ int WhatsappClient::inputFromServer(std::string msg)
 //    std::cout << "msg from server: " << msg << std::endl;
     if (msg == "0" || msg == "1"){
         isLastInnerMsg = true;
-//        std::cout << "msg: " << msg << std::endl;
-//        std::cout << "msg2: " << atoi(msg.c_str()) << std::endl;
+        std::cout << "msg: " << msg << std::endl;
+        std::cout << "msg2: " << atoi(msg.c_str()) << std::endl;
         successFromServer = (bool) atoi(msg.c_str());
         clientOutput(lastCommand, lastName, message, lastClients, successFromServer);
         return 0;
@@ -222,6 +222,7 @@ int WhatsappClient::inputFromServer(std::string msg)
         lastCommand = commandT;
         lastName = ""; // updated in validateName since every command with name goes through there
         lastClients = clients;
+        validateName(name);
         if (lastCommand == RECEIVER){
             clientOutput(lastCommand, lastName, message, lastClients, successFromServer);
         }
@@ -313,7 +314,7 @@ int WhatsappClient::readFromServer()
         }
 
     }
-//    std::cout << "out of while" << std::endl;
+    std::cout << "out of while: " << readBuffer-MAX_MESSAGE_LEN << std::endl;
 
     if (inputFromServer(readBuffer-MAX_MESSAGE_LEN) != 0) // updates lastCommand, lastName, lastClients
     {
@@ -334,7 +335,8 @@ int WhatsappClient::clientOutput(command_type commandT, std::string name, std::s
             print_create_group(false, success, nullptr, name);
             break;
         case SEND:
-            print_send(false, success, nullptr, nullptr, nullptr);
+            std::cout << "in clientOutput, success: " << success << std::endl;
+            print_send(false, success, name, name, messsage);
             break;
         case WHO:
 //            print_who_client(success, clients);
@@ -365,6 +367,7 @@ int WhatsappClient::clientOutput(command_type commandT, std::string name, std::s
 int WhatsappClient::writeToServer(std::string msg) //needed? (writea according to the protocol)
 {
 //    char* writeBuffer;
+    std::cout << "write to server: " << msg << std::endl;
     auto writeBuffer = new char[MAX_MESSAGE_LEN+1];
     bzero(writeBuffer,MAX_MESSAGE_LEN+1);
     if (initalized && (inputFromUser(msg) != 0))
@@ -392,8 +395,8 @@ int WhatsappClient::writeToServer(std::string msg) //needed? (writea according t
         }
 
     }
-//    std::cout << "totalBytesWritten: " << totalBytesWritten << std::endl;
-//    std::cout << "writeBuffer: " << writeBuffer << std::endl;
+    std::cout << "totalBytesWritten: " << totalBytesWritten << std::endl;
+    std::cout << "writeBuffer: " << writeBuffer << std::endl;
 
     delete writeBuffer;
     return totalBytesWritten;
@@ -466,6 +469,7 @@ int main(int argc, char* argv[]){
                 }
                 whatsappClient.inputFromUser(inputLine); // validation
                 whatsappClient.writeToServer(inputLine);
+                std::cout << "finished write to server " << std::endl;
             }
             if (FD_ISSET(whatsappClient.getSocketHandle(), &rfds)) // from server
             {
