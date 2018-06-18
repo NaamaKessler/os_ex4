@@ -41,7 +41,6 @@ int validatePort(char* port, unsigned short* portNum){
     }
 
     *portNum = (unsigned short) intPort;
-    std::cout << "portnum: " << *portNum << std::endl;
     return 0;
 }
 
@@ -97,12 +96,10 @@ WhatsappClient::WhatsappClient(char* clientName, char* serverAddress, char* serv
     unsigned short portNum;
     this->myName = clientName;
     if ((validateAddress(serverAddress)) != 0){
-        std::cout << "invalid address" << std::endl;
         exit(1);
     }
 
     if ((validatePort(serverPort, &portNum)) != 0){
-        std::cout << "invalid portNum" << std::endl;
         exit(1);
     }
 
@@ -150,20 +147,18 @@ int WhatsappClient::connectToServer(char *hostname, unsigned short portnum)
     sa.sin_family = (sa_family_t) hp->h_addrtype;
     sa.sin_port = htons(portnum);
 
-    std::cout << "server address: " << hp->h_addr << std::endl;
-    std::cout << "server port: " << sa.sin_port << std::endl;
 
     // socket
     if ((socketHandle = socket(hp->h_addrtype, SOCK_STREAM, 0)) < 0)
     {
-        print_error("callSocket+++", errno);
+        print_error("callSocket", errno);
         return -1;
     }
 
     // connect
     if (connect(socketHandle, (struct sockaddr *) &sa, sizeof(sa)) < 0)
     {
-        print_error("callSocket~~~", errno);
+        print_error("callSocket", errno);
         close(socketHandle);
         return -1;
     }
@@ -289,6 +284,7 @@ int WhatsappClient::writeToServer(std::string msg) //needed? (writea according t
         return -1;
     }
     strcpy(writeBuffer,msg.c_str());
+    writeBuffer[msg.length()] = '\0';
     int totalBytesWritten = 0; //counts bytes read
     int bytesWritten = 0; // bytes read this pass
 
@@ -307,7 +303,8 @@ int WhatsappClient::writeToServer(std::string msg) //needed? (writea according t
         }
 
     }
-
+//    std::cout << "totalBytesWritten: " << totalBytesWritten << std::endl;
+//    std::cout << "writeBuffer: " << writeBuffer << std::endl;
 
     delete writeBuffer;
     return totalBytesWritten;
@@ -325,7 +322,6 @@ int main(int argc, char* argv[]){
 
     // usage error:
     if (argc != NUM_OF_ARGS){
-        std::cout << "hi" << std::endl;
         print_client_usage();
         // exit
         exit(1);
@@ -346,14 +342,13 @@ int main(int argc, char* argv[]){
         FD_SET(whatsappClient.getSocketHandle(), &rfds);
         // get input from user
         getline(std::cin, inputLine);
-//        if (strcmp(inputLine, "EXIT") >= 0 || strcmp(inputLine, "exitFlag") >= 0)
         if ((inputLine == "exit") || (inputLine == "EXIT"))
         {
-            // either equal or the first character that does not match has a greater value in inputLine
-            // than in "EXIT"
             exitFlag = true;
+//            whatsappClient.parseMsg(inputLine); // validation
+            whatsappClient.writeToServer(inputLine);
+            continue;
         }
-
         // needs to get success message from the server - so it can print a success message
 
         retval = select(whatsappClient.getSocketHandle()+1, &rfds, nullptr, nullptr, nullptr);

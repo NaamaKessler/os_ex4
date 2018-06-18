@@ -64,7 +64,6 @@ WhatsappServer::~WhatsappServer()
  */
 int WhatsappServer::establishConnection()
 {
-    std::cout << "in establishConnection" << std::endl;
     int newSockFd = accept(this->listeningSocket, nullptr, nullptr);
     if (newSockFd < 0)
     {
@@ -74,7 +73,8 @@ int WhatsappServer::establishConnection()
     else
     {
         // insert to Fds map (register to server).
-        this->connectedClients[DEFAULT_CLIENT_NAME] = newSockFd;
+//        this->connectedClients["???"] = newSockFd;
+        this->connectedClients.insert(std::pair<std::string, int>(DEFAULT_CLIENT_NAME, newSockFd));
         return 1;
     }
 }
@@ -87,30 +87,34 @@ void WhatsappServer::readClient(std::string clientName)
 {
     int clientFd = this->connectedClients[clientName];
     auto buf = new char[257];
-    memset(buf, '\0', 257);
+    bzero(buf,257);
+//    memset(buf, '\0', 257);
     int byteCount = 0;
     int byteRead = 0;
+//    byteRead = (int)recv(clientFd, buf,  ((size_t)256-byteCount), 0);
     while (byteCount < 256)
-    {
-        byteRead = (int)read(clientFd, buf, (size_t)256-byteCount);
+    { /* loop until full buffer */
+        byteRead = (int) read(clientFd, buf, (256 - byteCount));
         if (byteRead > 0)
         {
             byteCount += byteRead;
             buf += byteRead;
         }
+
         if (byteRead < 1)
         {
+//            exit(1);
             print_error("read", errno);
         }
-    }
 
+    }
+//    std::cout << "out of while: " << (buf-256) << std::endl;
     // parse command:
     command_type commandT;
     std::string name;
     std::string messsage;
     std::vector<std::string> clients;
-    parse_command(buf, commandT, name, messsage, clients);
-
+    parse_command((buf-256), commandT, name, messsage, clients);
     int success = 0;
     switch (commandT)
     {
@@ -124,7 +128,7 @@ void WhatsappServer::readClient(std::string clientName)
             success = whosConnected();
             break;
         case EXIT:
-            success = exitClient(name);
+            success = exitClient(clientName);
             break;
         case NAME:
             success = insertName(clientFd, name);
@@ -132,7 +136,7 @@ void WhatsappServer::readClient(std::string clientName)
             break;
     }
     echoClient(clientFd, success);
-    delete buf;
+    delete (buf - 256);
 }
 
 /**
@@ -346,6 +350,7 @@ int main (int argc, char *argv[])
             // find max fd:
             for (const std::pair<const std::string, int>& client: server->getClients())
             {
+//                std::cout << "for 1" << std::endl;
                 if (client.second > maxClientFd)
                 {
                     maxClientFd = client.second;
@@ -359,6 +364,7 @@ int main (int argc, char *argv[])
             FD_SET(STDIN_FILENO, &readFds);
             for (const std::pair<const std::string, int>& client: server->getClients())
             {
+//                std::cout << "for 2" << std::endl;
                 FD_SET(client.second, &readFds);
             }
 
@@ -368,8 +374,10 @@ int main (int argc, char *argv[])
 
             if (FD_ISSET(server->listeningSocket, &readFds)) { // someone tried to connect (using the listening socket)
                 server->establishConnection();
+                continue;
             }
-            if (FD_ISSET(STDIN_FILENO, &readFds)) {
+            if (FD_ISSET(STDIN_FILENO, &readFds))
+            {
                 std::string inputLine;
                 getline(std::cin, inputLine);
                 if (strcmp(inputLine.c_str(), "EXIT") == 0)
@@ -379,13 +387,15 @@ int main (int argc, char *argv[])
                 }
             }
 
-            for (const std::pair<const std::string, int>& client: server->getClients())
+            for (const std::pair<const std::string, int> &client: server->getClients())
             {
+//                std::cout << "for 3" << std::endl;
                 if (FD_ISSET(client.second, &readFds))
                 {
                     server->readClient(client.first);
                 }
             }
+
         }
         // clean-ups and exit:
         close(server->listeningSocket);
