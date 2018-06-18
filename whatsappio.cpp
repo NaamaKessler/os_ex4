@@ -119,12 +119,9 @@ void parse_command(const std::string& command, command_type& commandT,
     message.clear();
     clients.clear();
 
-    std::cout << "IN PARSE: " << std::endl;
     
     strcpy(c, command.c_str());
-    std::cout << "command: " << command << std::endl;
     s = strtok_r(c, " ", &saveptr);
-    std::cout << "s: " << s << std::endl;
     if(!strcmp(s, "create_group")) {
         commandT = CREATE_GROUP;
         s = strtok_r(NULL, " ", &saveptr);
@@ -154,14 +151,12 @@ void parse_command(const std::string& command, command_type& commandT,
     } else if(!strcmp(s, "name")) {
         commandT = NAME;
         s = strtok_r(NULL, " ", &saveptr);
-//        name=*saveptr;
         if(!s) {
             commandT = INVALID;
             return;
         } else
         {
             name = s;
-            std::cout << "IN PARSE: name: " << name << std::endl;
         }
     } else if(!strcmp(s, "-1")) {
         commandT = SERVER_CRASH;

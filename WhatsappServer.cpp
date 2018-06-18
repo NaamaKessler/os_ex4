@@ -120,22 +120,26 @@ void WhatsappServer::readClient(std::string clientName)
     {
         case CREATE_GROUP:
             success = createGroup(clientName, name, clients);
+            echoClient(clientFd, success);
             break;
         case SEND:
             success = sendMessage(clientName, name, messsage);
+            echoClient(clientFd, success);
             break;
         case WHO:
             success = whosConnected();
+            echoClient(clientFd, success);
             break;
         case EXIT:
             success = exitClient(clientName);
+            echoClient(clientFd, success);
             break;
         case NAME:
-            success = insertName(clientFd, name);
+            insertName(clientFd, name);
         default: //we won't get here since Client makes sure that the command type is valid.
             break;
     }
-    echoClient(clientFd, success);
+
     delete (buf - 256);
 }
 
