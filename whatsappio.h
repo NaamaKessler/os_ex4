@@ -12,7 +12,7 @@
 #define WA_MAX_GROUP 50
 #define WA_MAX_INPUT ((WA_MAX_NAME+1)*(WA_MAX_GROUP+2))
 
-enum command_type {CREATE_GROUP, SEND, WHO, EXIT, INVALID, NAME, SERVER_CRASH, CLIENTS};
+enum command_type {CREATE_GROUP, SEND, WHO, EXIT, INVALID, NAME, SERVER_CRASH, CLIENTS, RECEIVER};
 // NAME: name <name>
 
 /*
@@ -122,5 +122,9 @@ void print_error(const std::string& function_name, int error_number);
  * clients: a vector containing the names of all clients
 */
 void parse_command(const std::string& command, command_type& commandT, std::string& name, std::string& messsage, std::vector<std::string>& clients);
+
+//void parse_inner_command(const std::string& command, command_type& commandT,
+//                         std::string& name, std::string& message,
+//                         std::vector<std::string>& clients);
 
 #endif

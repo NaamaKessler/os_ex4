@@ -33,7 +33,7 @@ public:
     int main(int argc, char* argv[]);
     WhatsappClient(char* clientName, char* serverAddress, char* serverPort);
     int connectToServer(char *hostname, unsigned short portnum); //tries to callSocket to the server.
-    int parseMsg(std::string msg); //parses the message and calls relevant methods for execution.
+//    int parseMsg(std::string msg); //parses the message and calls relevant methods for execution.
 //    int validateMsg(std::string msg); // makes sure the input is valid before it will be sent to the server.
 //    int validateMsg(const command_type& commandT, const std::string& name, const std::string& message,
 //                    const std::vector<std::string>& clients); // makes sure the input is valid before it
@@ -49,8 +49,15 @@ public:
     int validateSend(std::string& receiver);
     int setLastCommand(command_type command);
     command_type getLastCommand();
-    int clientOutput();
+    int setLastName(std::string& name);
+    int inputFromUser(std::string msg);
+    int inputFromServer(std::string msg);
+//    int clientOutput();
+    int clientOutput(command_type commandT, std::string name, std::string& messsage,
+                     std::vector<std::string> clients,
+                     bool success);
     bool isLastInnerMsg;
+    bool initalized;
 private:
 //    char myName[MAX_NAME_SIZE+1];
     std::string myName;

@@ -104,14 +104,14 @@ void WhatsappServer::readClient(std::string clientName)
         }
 
     }
-//    std::cout << "out of while: " << (buf-256) << std::endl;
+    std::cout << "out of while: " << (buf-256) << std::endl;
     // parse command:
     command_type commandT;
     std::string name;
     std::string messsage;
     std::vector<std::string> clients;
     parse_command((buf-256), commandT, name, messsage, clients);
-    std::string fullMsg = "receiver " + messsage;
+    std::string fullMsg = "receiver " + clientName + " " + messsage;
     int success = 0;
     switch (commandT)
     {

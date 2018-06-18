@@ -107,6 +107,21 @@ void print_error(const std::string& function_name, int error_number) {
     printf("ERROR: %s %d.\n", function_name.c_str(), error_number);
 }
 
+//void parse_inner_command(const std::string& command, command_type& commandT,
+//                         std::string& name, std::string& message,
+//                         std::vector<std::string>& clients)
+//{
+//    char c[WA_MAX_INPUT];
+//    const char *s;
+//    char *saveptr;
+//    name.clear();
+//    message.clear();
+//    clients.clear();
+//
+//    strcpy(c, command.c_str());
+//    s = strtok_r(c, " ", &saveptr);
+//
+//}
 
 void parse_command(const std::string& command, command_type& commandT, 
                    std::string& name, std::string& message, 
@@ -167,6 +182,17 @@ void parse_command(const std::string& command, command_type& commandT,
             while((s = strtok_r(NULL, ",", &saveptr)) != NULL) {
                 clients.emplace_back(s);
             }
+        }
+    } else if(!strcmp(s, "receiver")) {
+        commandT = RECEIVER;
+        s = strtok_r(NULL, " ", &saveptr);
+        if(!s) {
+            commandT = INVALID;
+            return;
+        } else
+        {
+            name = s;
+            message = command.substr(name.size() + 10); // 10 = 2 spaces + "receiver"
         }
     } else if(!strcmp(s, "server_crash")) {
         commandT = SERVER_CRASH;
