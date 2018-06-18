@@ -111,6 +111,7 @@ void WhatsappServer::readClient(std::string clientName)
     std::string messsage;
     std::vector<std::string> clients;
     parse_command((buf-256), commandT, name, messsage, clients);
+    std::string fullMsg = "receiver " + messsage;
     int success = 0;
     switch (commandT)
     {
@@ -119,7 +120,7 @@ void WhatsappServer::readClient(std::string clientName)
             echoClient(clientName, success);
             break;
         case SEND:
-            success = sendMessage(clientName, name, messsage, false);
+            success = sendMessage(clientName, name, fullMsg, false);
             echoClient(clientName, success);
             break;
         case WHO:

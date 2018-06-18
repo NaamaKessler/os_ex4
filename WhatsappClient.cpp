@@ -183,22 +183,6 @@ int WhatsappClient::parseMsg(std::string msg) //parses the message and calls rel
         successFromServer = (bool) atoi(msg.c_str());
         return 0;
     }
-    //todo:add clients
-    // should be here? doesn't have success from server
-//    if (boost::algorithm::starts_with(msg, "clients")){
-//        std::vector<std::string> clientList;
-//        std::string delimiter = " ";
-//
-//        size_t pos = 0;
-//        std::string token;
-//        while ((pos = msg.find(delimiter)) != std::string::npos) {
-//            token = msg.substr(0, pos);
-//            msg.erase(0, pos + delimiter.length());
-//            clientList.push_back(token);
-//        }
-//        print_who_client(true, clientList);
-//        return 0;
-//    }
     parse_command(msg, commandT, name, messsage, clients);
     // validate & call funcs
     lastCommand = commandT;
