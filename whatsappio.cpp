@@ -1,6 +1,5 @@
 #include "whatsappio.h"
-#include <cstdio>
-#include <iostream>
+
 
 void print_exit() {
     printf("EXIT command is typed: server is shutting down\n");
@@ -158,7 +157,18 @@ void parse_command(const std::string& command, command_type& commandT,
         {
             name = s;
         }
-    } else if(!strcmp(s, "-1")) {
+    } else if(!strcmp(s, "clients")) {
+        commandT = CLIENTS;
+        if(!s) {
+            commandT = INVALID;
+            return;
+        } else
+        {
+            while((s = strtok_r(NULL, ",", &saveptr)) != NULL) {
+                clients.emplace_back(s);
+            }
+        }
+    } else if(!strcmp(s, "server_crash")) {
         commandT = SERVER_CRASH;
     } else {
         commandT = INVALID;

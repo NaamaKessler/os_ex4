@@ -1,7 +1,3 @@
-//
-// Created by Naama on 6/12/2018.
-//
-
 #ifndef OS_EX4_WHATSAPPSERVER_HPP
 #define OS_EX4_WHATSAPPSERVER_HPP
 
@@ -18,6 +14,7 @@
 #include <map>
 #include <set>
 #include <errno.h>
+#include <algorithm>
 
 // ------------------------------- constants ------------------------------- //
 #define MAX_NAME_SIZE = 30
@@ -63,7 +60,7 @@ public:
     /**
     * Signals to client that the server has crashed / got an EXIT command.
     */
-    void signalExit(int clientFd);
+    void signalExit(const std::string& clientName);
 
 private:
     char myName[31];
@@ -83,13 +80,14 @@ private:
     * Sends message from one client to the another.
     * @return 1 on success, 0 otherwise.
     */
-    int sendMessage(std::string &originName, std::string &destName, std::string &message);
+    int sendMessage(std::string &originName, const std::string &destName, std::string &message,
+                    bool innerMessage);
 
     /**
     * Lists all connected clients names.
      * @return 1 on success, 0 otherwise.
     */
-    int whosConnected();
+    int whosConnected(std::string& clientName);
 
     /**
     * Executes exit request of the client.
@@ -109,7 +107,7 @@ private:
      * @param clientFd
      * @param success
      */
-    void echoClient(int clientFd, int success);
+    void echoClient(std::string& clientName, int success);
 
 
 };

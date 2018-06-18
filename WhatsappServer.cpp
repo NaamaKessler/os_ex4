@@ -1,7 +1,3 @@
-//
-// Created by Naama on 6/12/2018.
-//
-
 // ------------------------------- includes ------------------------------- //
 #include "WhatsappServer.hpp"
 
@@ -55,7 +51,7 @@ WhatsappServer::~WhatsappServer()
     close(this->listeningSocket);
     for (const std::pair<const std::string, int>& client: this->connectedClients)
     {
-        signalExit(client.second);
+        signalExit(client.first);
     }
 }
 
@@ -120,19 +116,20 @@ void WhatsappServer::readClient(std::string clientName)
     {
         case CREATE_GROUP:
             success = createGroup(clientName, name, clients);
-            echoClient(clientFd, success);
+            echoClient(clientName, success);
             break;
         case SEND:
-            success = sendMessage(clientName, name, messsage);
-            echoClient(clientFd, success);
+            success = sendMessage(clientName, name, messsage, false);
+            echoClient(clientName, success);
             break;
         case WHO:
-            success = whosConnected();
-            echoClient(clientFd, success);
+            success = whosConnected(clientName);
+//            std::cout << "success: " << success << std::endl;
+            echoClient(clientName, success);
             break;
         case EXIT:
             success = exitClient(clientName);
-            echoClient(clientFd, success);
+            echoClient(clientName, success);
             break;
         case NAME:
             insertName(clientFd, name);
@@ -195,22 +192,28 @@ int WhatsappServer::createGroup(std::string& clientName, std::string& groupName,
  * Sends message fron one client to the another.
  * @return
  */
-int WhatsappServer::sendMessage(std::string &originName, std::string &destName,
-                                std::string &message)
+int WhatsappServer::sendMessage(std::string &originName, const std::string &destName,
+                                std::string &message, bool innerMessage)
 {
     // verify that the client exists:
     if (this->connectedClients.empty() ||
             this->connectedClients.find(destName) == this->connectedClients.end())
     {
-        print_send(true, false, originName, destName, message);
+        if (!innerMessage)
+        {
+            print_send(true, false, originName, destName, message);
+            return 0;
+        }
         return 1;
     }
+//    std::cout << "message: " << message << std::endl;
     int byteCount = 0;
     int byteWritten = 0;
     while (byteCount < 256)
     {
         byteWritten = (int)write(this->connectedClients.at(destName),
                                  message.c_str() + byteWritten, (size_t)256-byteCount);
+//        std::cout << "byteWritten: " << byteWritten << std::endl;
         if (byteWritten > 0)
         {
             byteCount += byteWritten;
@@ -221,23 +224,37 @@ int WhatsappServer::sendMessage(std::string &originName, std::string &destName,
             return 0;
         }
     }
-    print_message(originName, message);
+    if (!innerMessage)
+    {
+        print_message(originName, message);
+    }
     return 1;
 }
 
 /**
  * @return a list containing all connected clients names.
  */
-int WhatsappServer::whosConnected()
+int WhatsappServer::whosConnected(std::string& clientName)
 {
-    auto clientsNames = new char[(30*this->connectedClients.size()) + 1];
-    memset(clientsNames, '\0', (30*this->connectedClients.size()) + 1);
+//    auto connectedClientsNames = new char[(30*this->connectedClients.size()) + 1];
+    std::vector<std::string> clientsNamesVec;
+    std::string connectedClientsNames = "clients ";
+//    memset(connectedClientsNames, '\0', (30*this->connectedClients.size()) + 1);
     for (const auto& pair: this->connectedClients)
     {
-        memcpy(clientsNames, (pair.first).c_str(), pair.first.length());
+//        memcpy(connectedClientsNames, (pair.first).c_str() + ',', pair.first.length());  //todo - sort, comma
+//        connectedClientsNames += pair.first;
+        clientsNamesVec.push_back(pair.first);
     }
-    print_who_server(clientsNames);
-    delete clientsNames;
+    std::sort(clientsNamesVec.begin(), clientsNamesVec.end());
+    for (int i = 0; i < clientsNamesVec.size() - 1; i++)
+    {
+        connectedClientsNames += clientsNamesVec[i];
+        connectedClientsNames += ",";
+    }
+    connectedClientsNames += clientsNamesVec.back();
+    this->sendMessage(clientName, clientName, connectedClientsNames, true);
+    print_who_server(clientName);
     return 1;
 }
 
@@ -290,45 +307,48 @@ int WhatsappServer::insertName(int clientFd, std::string& name)
  * @param clientFd
  * @param success
  */
-void WhatsappServer::echoClient(int clientFd, int success)
+void WhatsappServer::echoClient(std::string& clientName, int success)
 {
-    unsigned int byteCount = 0;
-    unsigned int byteWritten = 0;
-    while (byteCount < sizeof(int))
-    {
-        byteWritten = (unsigned int)write(clientFd, (char*)(&success), 4);
-        if (byteWritten > 0)
-        {
-            byteCount += byteWritten;
-        }
-        else
-        {
-            print_error("write", errno);
-        }
-    }
+    std::string successVal = std::to_string(success);
+//    unsigned int byteCount = 0;
+//    unsigned int byteWritten = 0;
+//    while (byteCount < sizeof(int))
+//    {
+//        byteWritten = (unsigned int)write(clientFd, (char*)(&success), 4);
+//        if (byteWritten > 0)
+//        {
+//            byteCount += byteWritten;
+//        }
+//        else
+//        {
+//            print_error("write", errno);
+//        }
+//    }
+    this->sendMessage(clientName, clientName, successVal, true);
 }
 
 
 /**
  * Signals to client that the server has crashed / got an EXIT command.
  */
-void WhatsappServer::signalExit(int clientFd)
+void WhatsappServer::signalExit(const std::string& clientName)
 {
-    std::string crash_protocol = "server_crash";
-    unsigned int byteCount = 0;
-    unsigned int byteWritten = 0;
-    while (byteCount < sizeof(char)*crash_protocol.length())
-    {
-        byteWritten = (int)write(clientFd, crash_protocol.c_str() + byteWritten, sizeof(int));
-        if (byteWritten > 0)
-        {
-            byteCount += byteWritten;
-        }
-        else
-        {
-            print_error("write", errno);
-        }
-    }
+    std::string crash_protocol = "server_crash ";
+//    unsigned int byteCount = 0;
+//    unsigned int byteWritten = 0;
+//    while (byteCount < sizeof(char)*crash_protocol.length())
+//    {
+//        byteWritten = (int)write(clientFd, crash_protocol.c_str() + byteWritten, sizeof(int));
+//        if (byteWritten > 0)
+//        {
+//            byteCount += byteWritten;
+//        }
+//        else
+//        {
+//            print_error("write", errno);
+//        }
+    sendMessage(crash_protocol, clientName, crash_protocol, true);
+//    }
 }
 
 
@@ -402,11 +422,11 @@ int main (int argc, char *argv[])
 
         }
         // clean-ups and exit:
-        close(server->listeningSocket);
         for (const std::pair<const std::string, int>& client: server->getClients())
         {
-            server->signalExit(client.second);
+            server->signalExit(client.first);
         }
+        close(server->listeningSocket);
         delete server;
         exit(0);
     }

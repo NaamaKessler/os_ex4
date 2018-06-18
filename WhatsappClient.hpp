@@ -16,6 +16,7 @@
 #include <string>
 #include <set>
 #include <regex>
+#include <boost/algorithm/string.hpp>
 
 // ------------------------------- constants ------------------------------- //
 #define MAX_NAME_SIZE 30

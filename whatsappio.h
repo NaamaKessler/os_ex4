@@ -4,13 +4,15 @@
 #include <cstring>
 #include <string>
 #include <vector>
+#include <cstdio>
+#include <iostream>
 
 #define WA_MAX_NAME 30
 #define WA_MAX_MESSAGE 256
 #define WA_MAX_GROUP 50
 #define WA_MAX_INPUT ((WA_MAX_NAME+1)*(WA_MAX_GROUP+2))
 
-enum command_type {CREATE_GROUP, SEND, WHO, EXIT, INVALID, NAME, SERVER_CRASH};
+enum command_type {CREATE_GROUP, SEND, WHO, EXIT, INVALID, NAME, SERVER_CRASH, CLIENTS};
 // NAME: name <name>
 
 /*
