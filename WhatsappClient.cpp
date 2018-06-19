@@ -64,6 +64,7 @@ int WhatsappClient::validateGroup(const std::string& name, const std::vector<std
     {
 //        std::cout << "group is invalid" << std::endl;
         // is this client in the group
+
         return -1;
     }
     return 0;
@@ -98,10 +99,12 @@ WhatsappClient::WhatsappClient(char* clientName, char* serverAddress, char* serv
     this->isLastInnerMsg = false;
     this->initalized = false;
     if ((validateAddress(serverAddress)) != 0){
+        print_client_usage();
         exit(1);
     }
 
     if ((validatePort(serverPort, &portNum)) != 0){
+        print_client_usage();
         exit(1);
     }
 
@@ -175,9 +178,9 @@ int WhatsappClient::inputFromUser(std::string msg)
 {
     command_type commandT;
     std::string name;
-    std::string messsage;
+    std::string message;
     std::vector<std::string> clients;
-    parse_command(msg, commandT, name, messsage, clients);
+    parse_command(msg, commandT, name, message, clients);
     lastCommand = commandT;
     lastName = ""; // updated in validateName since every command with name goes through there
     lastClients = clients;
@@ -185,12 +188,14 @@ int WhatsappClient::inputFromUser(std::string msg)
     switch (commandT){
         case CREATE_GROUP:
             if (validateGroup(name, clients) != 0){
+                print_create_group(false, false, myName, name);
                 return -1;
             }
             break;
         case SEND:
             lastName = name;
             if (validateSend(name) != 0){
+                print_send(false, false, myName, name, message);
                 return -1;
             }
             break;
@@ -235,64 +240,9 @@ int WhatsappClient::inputFromServer(std::string msg)
             clientOutput(lastCommand, lastName, message, lastClients, successFromServer);
         }
     }
-
-//    clientOutput(lastCommand, name, message, clients, successFromServer);
+    return 0;
 }
 
-//int WhatsappClient::parseMsg(std::string msg) //parses the message and calls relevant methods for execution.
-//{
-//    command_type commandT;
-//    std::string name;
-//    std::string messsage;
-//    std::vector<std::string> clients;
-//
-////    std::cout << "isLastInnerMsg: " << isLastInnerMsg << std::endl;
-////    std::cout << "msg0: " << msg << std::endl;
-//
-//    if (msg == "0" || msg == "1"){
-//        isLastInnerMsg = true;
-////        std::cout << "msg: " << msg << std::endl;
-////        std::cout << "msg2: " << atoi(msg.c_str()) << std::endl;
-//        successFromServer = (bool) atoi(msg.c_str());
-//        return 0;
-//    }
-//    parse_command(msg, commandT, name, messsage, clients);
-//    // validate & call funcs
-//    lastCommand = commandT;
-//    lastName = ""; // updated in validateName since every command with name goes through there
-//    lastClients = clients;
-//    switch (commandT){
-//        case CREATE_GROUP:
-//            if (validateGroup(name, clients) != 0){
-//                return -1;
-//            }
-//            break;
-//        case SEND:
-//            if (validateSend(name) != 0){
-//                return -1;
-//            }
-//            break;
-//        case WHO:
-//            break;
-//        case EXIT:
-//            break;
-//        case NAME:
-//            if (validateName(name) != 0) {
-//                return -1;
-//            }
-//            break;
-//        case CLIENTS:
-//            break;
-//        case SERVER_CRASH:
-//            // server exits before the client
-//            close(this->getSocketHandle());
-//            exit(1); // todo: what exit code?
-//        case INVALID:
-//            print_invalid_input();
-//            break;
-//    }
-//    return 0;
-//}
 
 int WhatsappClient::readFromServer()
 {
@@ -318,6 +268,7 @@ int WhatsappClient::readFromServer()
 
         if (bytesRead < 1)
         {
+            print_error("read", errno);
             return (-1);
         }
 
@@ -402,6 +353,7 @@ int WhatsappClient::writeToServer(std::string msg) //needed? (writea according t
 
         if (bytesWritten < 1)
         {
+            print_error("write", errno);
             return (-1);
         }
 
@@ -460,7 +412,7 @@ int main(int argc, char* argv[]){
         retval = select(whatsappClient->getSocketHandle()+1, &rfds, nullptr, nullptr, nullptr);
         if (retval == -1)
         {
-            //error
+            print_error("select", errno);
         }
         else
         {
@@ -478,21 +430,13 @@ int main(int argc, char* argv[]){
                     whatsappClient->writeToServer(inputLine);
                     continue;
                 }
-                whatsappClient->inputFromUser(inputLine); // validation
+//                whatsappClient->inputFromUser(inputLine); // validation
                 whatsappClient->writeToServer(inputLine);
 //                std::cout << "finished write to server " << std::endl;
             }
             if (FD_ISSET(whatsappClient->getSocketHandle(), &rfds)) // from server
             {
-//                std::cout << "listening to " << whatsappClient->getSocketHandle() << std::endl;
-                if (whatsappClient->readFromServer() != -1){ // calls parseMsg
-//                    if (whatsappClient->isLastInnerMsg){ // enter here only if it got 0/-1
-//
-//                        whatsappClient->clientOutput();
-//                        whatsappClient->isLastInnerMsg = false;
-//                    }
-
-                } // calls parseMsg
+                whatsappClient->readFromServer();
             }
 
         }

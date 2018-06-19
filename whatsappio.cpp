@@ -186,7 +186,6 @@ void parse_command(const std::string& command, command_type& commandT,
     } else if(!strcmp(s, "receiver")) {
         commandT = RECEIVER;
         s = strtok_r(NULL, " ", &saveptr);
-        std::cout << "in parse, name: " << s << std::endl;
         if(!s) {
             commandT = INVALID;
             return;
