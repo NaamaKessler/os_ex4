@@ -121,13 +121,12 @@ void WhatsappServer::readClient(std::string clientName)
             if (this->groups.find(name) != this->groups.end())
             {
                 success = this->sendToGroup(name, clientName, message);
-                // todo - success msg of group
             }
             else
             {
                 success = sendMessage(SEND, clientName, name, message);
-                print_send(true, true, clientName, name, message);
             }
+            print_send(true, true, clientName, name, message);
             echoClient(clientName, success);
             break;
         case WHO:
@@ -136,8 +135,8 @@ void WhatsappServer::readClient(std::string clientName)
             echoClient(clientName, success);
             break;
         case EXIT:
-            success = exitClient(clientName);
-            echoClient(clientName, success);
+            exitClient(clientName);
+            std::cout << "finished EXIT" << std::endl;
             break;
         case NAME:
             insertName(clientFd, name);
@@ -302,8 +301,10 @@ int WhatsappServer::exitClient(std::string& clientName)
     this->connectedClients.erase(clientName);
     for (auto& group: this->groups)
     {
+        std::cout << "delete from group" << std::endl;
         group.second.erase(clientName);
     }
+    std::cout << "after for" << std::endl;
     print_exit(true, clientName);
     return 1;
 }

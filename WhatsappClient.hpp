@@ -32,6 +32,7 @@ class WhatsappClient
 public:
     int main(int argc, char* argv[]);
     WhatsappClient(char* clientName, char* serverAddress, char* serverPort);
+    ~WhatsappClient();
     int connectToServer(char *hostname, unsigned short portnum); //tries to callSocket to the server.
 //    int parseMsg(std::string msg); //parses the message and calls relevant methods for execution.
 //    int validateMsg(std::string msg); // makes sure the input is valid before it will be sent to the server.
@@ -64,7 +65,7 @@ private:
     struct sockaddr_in sa;
     struct hostent *hp;
     int socketHandle;
-    std::vector<std::string> groups = {};
+//    std::vector<std::string> groups = {};
     command_type lastCommand;
     std::string lastName;
     std::vector<std::string> lastClients;

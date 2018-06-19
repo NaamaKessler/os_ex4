@@ -116,6 +116,10 @@ WhatsappClient::WhatsappClient(char* clientName, char* serverAddress, char* serv
     }
 }
 
+WhatsappClient::~WhatsappClient(){
+    close(this->getSocketHandle());
+}
+
 int WhatsappClient::getSocketHandle()
 {
     return this->socketHandle;
@@ -429,15 +433,15 @@ int main(int argc, char* argv[]){
     }
 
     // init socket & connection
-    WhatsappClient whatsappClient = WhatsappClient(argv[1], argv[2], argv[3]);
+    WhatsappClient* whatsappClient = new WhatsappClient(argv[1], argv[2], argv[3]);
     std::string nameCommand = "name ";
     std::string name = argv[1];
-    whatsappClient.validateName(name);
+    whatsappClient->validateName(name);
     nameCommand.append(name);
-    whatsappClient.setLastCommand(NAME);
-    whatsappClient.setLastName(name);
-    whatsappClient.writeToServer(nameCommand);
-    whatsappClient.initalized = true;
+    whatsappClient->setLastCommand(NAME);
+    whatsappClient->setLastName(name);
+    whatsappClient->writeToServer(nameCommand);
+    whatsappClient->initalized = true;
 
     // wait for input
     std::string inputLine;
@@ -445,12 +449,12 @@ int main(int argc, char* argv[]){
     while (!exitFlag){
         FD_ZERO(&rfds);
         FD_SET(STDIN_FILENO, &rfds);
-        FD_SET(whatsappClient.getSocketHandle(), &rfds);
+        FD_SET(whatsappClient->getSocketHandle(), &rfds);
         // get input from user
 
         // needs to get success message from the server - so it can print a success message
 
-        retval = select(whatsappClient.getSocketHandle()+1, &rfds, nullptr, nullptr, nullptr);
+        retval = select(whatsappClient->getSocketHandle()+1, &rfds, nullptr, nullptr, nullptr);
         if (retval == -1)
         {
             //error
@@ -468,21 +472,21 @@ int main(int argc, char* argv[]){
 
 //                    std::cout << "in exit" << std::endl;
                     exitFlag = true;
-                    whatsappClient.writeToServer(inputLine);
+                    whatsappClient->writeToServer(inputLine);
                     continue;
                 }
-                whatsappClient.inputFromUser(inputLine); // validation
-                whatsappClient.writeToServer(inputLine);
+                whatsappClient->inputFromUser(inputLine); // validation
+                whatsappClient->writeToServer(inputLine);
 //                std::cout << "finished write to server " << std::endl;
             }
-            if (FD_ISSET(whatsappClient.getSocketHandle(), &rfds)) // from server
+            if (FD_ISSET(whatsappClient->getSocketHandle(), &rfds)) // from server
             {
-//                std::cout << "listening to " << whatsappClient.getSocketHandle() << std::endl;
-                if (whatsappClient.readFromServer() != -1){ // calls parseMsg
-//                    if (whatsappClient.isLastInnerMsg){ // enter here only if it got 0/-1
+//                std::cout << "listening to " << whatsappClient->getSocketHandle() << std::endl;
+                if (whatsappClient->readFromServer() != -1){ // calls parseMsg
+//                    if (whatsappClient->isLastInnerMsg){ // enter here only if it got 0/-1
 //
-//                        whatsappClient.clientOutput();
-//                        whatsappClient.isLastInnerMsg = false;
+//                        whatsappClient->clientOutput();
+//                        whatsappClient->isLastInnerMsg = false;
 //                    }
 
                 } // calls parseMsg
@@ -491,7 +495,8 @@ int main(int argc, char* argv[]){
         }
 
     }
-    close(whatsappClient.getSocketHandle()); // todo - is needed elsewhere?
+
+    delete(whatsappClient);
     exit(0);
 
 }
