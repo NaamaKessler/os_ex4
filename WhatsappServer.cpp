@@ -103,7 +103,7 @@ void WhatsappServer::readClient(std::string clientName)
         }
 
     }
-    std::cout << "out of while: " << (buf-256) << std::endl;
+//    std::cout << "out of while: " << (buf-256) << std::endl;
     // parse command:
     command_type commandT;
     std::string name;
@@ -136,7 +136,7 @@ void WhatsappServer::readClient(std::string clientName)
             break;
         case EXIT:
             exitClient(clientName);
-            std::cout << "finished EXIT" << std::endl;
+//            std::cout << "finished EXIT" << std::endl;
             break;
         case NAME:
             insertName(clientFd, name);
@@ -205,7 +205,7 @@ int WhatsappServer::sendToGroup(std::string& groupName, std::string& origName, s
         {
             if (client != origName)
             {
-                std::cout << "client: " << client << std::endl;
+//                std::cout << "client: " << client << std::endl;
                 if (sendMessage(SEND, origName, client, msg) == 0)
                 {
                     // error
@@ -301,10 +301,10 @@ int WhatsappServer::exitClient(std::string& clientName)
     this->connectedClients.erase(clientName);
     for (auto& group: this->groups)
     {
-        std::cout << "delete from group" << std::endl;
+//        std::cout << "delete from group" << std::endl;
         group.second.erase(clientName);
     }
-    std::cout << "after for" << std::endl;
+//    std::cout << "after for" << std::endl;
     print_exit(true, clientName);
     return 1;
 }
