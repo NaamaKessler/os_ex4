@@ -82,15 +82,15 @@ int WhatsappServer::establishConnection()
 void WhatsappServer::readClient(std::string clientName)
 {
     int clientFd = this->connectedClients[clientName];
-    auto buf = new char[257];
-    bzero(buf,257);
+    auto buf = new char[WA_MAX_INPUT+1];
+    bzero(buf,WA_MAX_INPUT+1);
 //    memset(buf, '\0', 257);
     int byteCount = 0;
     int byteRead = 0;
 //    byteRead = (int)recv(clientFd, buf,  ((size_t)256-byteCount), 0);
-    while (byteCount < 256)
+    while (byteCount < WA_MAX_INPUT)
     { /* loop until full buffer */
-        byteRead = (int) read(clientFd, buf, (256 - byteCount));
+        byteRead = (int) read(clientFd, buf, (WA_MAX_INPUT - byteCount));
         if (byteRead > 0)
         {
             byteCount += byteRead;
@@ -110,7 +110,7 @@ void WhatsappServer::readClient(std::string clientName)
     std::string name;
     std::string message;
     std::vector<std::string> clients;
-    parse_command((buf-256), commandT, name, message, clients);
+    parse_command((buf-WA_MAX_INPUT), commandT, name, message, clients);
     int success = 0;
     switch (commandT)
     {
@@ -145,7 +145,7 @@ void WhatsappServer::readClient(std::string clientName)
             break;
     }
 
-    delete (buf - 256);
+    delete (buf - WA_MAX_INPUT);
 }
 
 /**
@@ -162,7 +162,7 @@ std::map<std::string, int> WhatsappServer::getClients()
  * @return
  */
 int WhatsappServer::createGroup(std::string& clientName, std::string& groupName,
-                                  std::vector<std::string>& members)
+                                std::vector<std::string>& members)
 {
     if ((this->groups.find(groupName) == this->groups.end()) &&
         (this->connectedClients.find(groupName) == this->connectedClients.end()))
@@ -246,10 +246,10 @@ int WhatsappServer::sendMessage(command_type command, std::string &originName, c
     }
     int byteCount = 0;
     int byteWritten = 0;
-    while (byteCount < 256)
+    while (byteCount < WA_MAX_INPUT)
     {
         byteWritten = (int)write(this->connectedClients.at(destName),
-                                 fullMsg.c_str() + byteWritten, (size_t)256-byteCount);
+                                 fullMsg.c_str() + byteWritten, (size_t)WA_MAX_INPUT-byteCount);
 //        std::cout << "byteWritten: " << byteWritten << std::endl;
         if (byteWritten > 0)
         {
