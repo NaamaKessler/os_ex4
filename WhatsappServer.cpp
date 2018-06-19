@@ -69,7 +69,6 @@ int WhatsappServer::establishConnection()
     else
     {
         // insert to Fds map (register to server).
-//        this->connectedClients["???"] = newSockFd;
         this->connectedClients.insert(std::pair<std::string, int>(DEFAULT_CLIENT_NAME, newSockFd));
         return 1;
     }
@@ -108,9 +107,9 @@ void WhatsappServer::readClient(std::string clientName)
     // parse command:
     command_type commandT;
     std::string name;
-    std::string messsage;
+    std::string message;
     std::vector<std::string> clients;
-    parse_command((buf-256), commandT, name, messsage, clients);
+    parse_command((buf-256), commandT, name, message, clients);
     int success = 0;
     switch (commandT)
     {
@@ -119,7 +118,16 @@ void WhatsappServer::readClient(std::string clientName)
             echoClient(clientName, success);
             break;
         case SEND:
-            success = sendMessage(SEND, clientName, name, messsage, false);
+            if (this->groups.find(name) != this->groups.end())
+            {
+                success = this->sendToGroup(name, clientName, message);
+                // todo - success msg of group
+            }
+            else
+            {
+                success = sendMessage(SEND, clientName, name, message);
+                print_send(true, true, clientName, name, message);
+            }
             echoClient(clientName, success);
             break;
         case WHO:
@@ -165,7 +173,7 @@ int WhatsappServer::createGroup(std::string& clientName, std::string& groupName,
         {
             if ((this->connectedClients.find(member) != this->connectedClients.end())) //the client exists
             {
-                this->groups[groupName].insert(this->connectedClients[member]);
+                this->groups[groupName].insert(member);
                 // set ensures that no member will be inserted twice.
             }
             else
@@ -175,7 +183,7 @@ int WhatsappServer::createGroup(std::string& clientName, std::string& groupName,
                 return 0;
             }
         }
-        this->groups[groupName].insert(this->connectedClients[clientName]); //add creator to group
+        this->groups[groupName].insert(clientName); //add creator to group
         print_create_group(true, true, clientName, groupName);
         return 1;
     }
@@ -188,23 +196,45 @@ int WhatsappServer::createGroup(std::string& clientName, std::string& groupName,
 
 
 // ------------------------------- private methods ------------------------------- //
+
+int WhatsappServer::sendToGroup(std::string& groupName, std::string& origName, std::string& msg)
+{
+    if (this->groups.find(groupName) != this->groups.end())
+    {
+        std::set<std::string> clients = this->groups[groupName];
+        for (const std::string& client: clients)
+        {
+            if (client != origName)
+            {
+                std::cout << "client: " << client << std::endl;
+                if (sendMessage(SEND, origName, client, msg) == 0)
+                {
+                    // error
+                    return 0;
+                }
+            }
+        }
+
+        return 1;
+    }
+    else
+    {
+        //error
+        return 0;
+    }
+}
+
 /**
  * Sends message fron one client to the another.
  * @return
  */
 int WhatsappServer::sendMessage(command_type command, std::string &originName, const std::string &destName,
-                                std::string &message, bool innerMessage)
+                                std::string &message)
 {
     // verify that the client exists:
-    if (this->connectedClients.empty() ||
-            this->connectedClients.find(destName) == this->connectedClients.end())
+    if (this->connectedClients.empty()) //todo - check client exists
     {
-        if (!innerMessage)
-        {
-            print_send(true, false, originName, destName, message);
-            return 0;
-        }
-        return 1;
+        return 0;
     }
     std::string fullMsg;
 //    std::cout << "message: " << message << std::endl;
@@ -233,10 +263,6 @@ int WhatsappServer::sendMessage(command_type command, std::string &originName, c
             return 0;
         }
     }
-    if (!innerMessage)
-    {
-        print_send(true, true, originName, destName, message);
-    }
     return 1;
 }
 
@@ -262,7 +288,7 @@ int WhatsappServer::whosConnected(std::string& clientName)
         connectedClientsNames += ",";
     }
     connectedClientsNames += clientsNamesVec.back();
-    this->sendMessage(INVALID, clientName, clientName, connectedClientsNames, true);
+    this->sendMessage(INVALID, clientName, clientName, connectedClientsNames);
     print_who_server(clientName);
     return 1;
 }
@@ -273,11 +299,10 @@ int WhatsappServer::whosConnected(std::string& clientName)
  */
 int WhatsappServer::exitClient(std::string& clientName)
 {
-    int clientFd = this->connectedClients[clientName];
     this->connectedClients.erase(clientName);
     for (auto& group: this->groups)
     {
-        group.second.erase(clientFd);
+        group.second.erase(clientName);
     }
     print_exit(true, clientName);
     return 1;
@@ -333,7 +358,7 @@ void WhatsappServer::echoClient(std::string& clientName, int success)
 //            print_error("write", errno);
 //        }
 //    }
-    this->sendMessage(INVALID, clientName, clientName, successVal, true);
+    this->sendMessage(INVALID, clientName, clientName, successVal);
 }
 
 
@@ -356,7 +381,7 @@ void WhatsappServer::signalExit(const std::string& clientName)
 //        {
 //            print_error("write", errno);
 //        }
-    sendMessage(INVALID, crash_protocol, clientName, crash_protocol, true);
+    sendMessage(INVALID, crash_protocol, clientName, crash_protocol);
 //    }
 }
 

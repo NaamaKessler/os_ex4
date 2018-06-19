@@ -67,7 +67,7 @@ private:
     struct sockaddr_in sa;
     struct hostent* hp;
     std::map<std::string, int> connectedClients;
-    std::map<std::string, std::set<int>> groups;
+    std::map<std::string, std::set<std::string>> groups;
 
     /**
     * Creates a group of clients.
@@ -80,8 +80,10 @@ private:
     * Sends message from one client to the another.
     * @return 1 on success, 0 otherwise.
     */
-    int sendMessage(command_type command, std::string &originName, const std::string &destName, std::string &message,
-                    bool innerMessage);
+    int sendMessage(command_type command, std::string &originName, const std::string &destName,
+                    std::string &message);
+
+    int sendToGroup(std::string& groupName, std::string& origName, std::string& msg);
 
     /**
     * Lists all connected clients names.

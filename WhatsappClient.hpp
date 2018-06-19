@@ -22,7 +22,7 @@
 #define MAX_NAME_SIZE 30
 #define MAX_MESSAGE_LEN 256
 #define MAX_GROUP_SIZE 50
-#define MIN_GROUP_SIZE 2
+#define MIN_GROUP_SIZE 1
 #define NUM_OF_ARGS 4
 #define MAX_PORT_NUM 65535
 
