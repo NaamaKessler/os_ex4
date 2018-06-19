@@ -127,7 +127,7 @@ void WhatsappServer::readClient(std::string clientName)
             {
                 success = sendMessage(SEND, clientName, name, message);
             }
-            print_send(true, true, clientName, name, message);
+            print_send(true, success, clientName, name, message);
             echoClient(clientName, success);
             break;
         case WHO:
@@ -230,7 +230,10 @@ int WhatsappServer::sendMessage(command_type command, std::string &originName, c
                                 std::string &message)
 {
     // verify that the client exists:
-    if (this->connectedClients.empty()) //todo - check client exists
+    if (this->connectedClients.empty() || (this->connectedClients.find(destName) == this->connectedClients
+                                                                                           .end())) //todo
+        // - check
+        // client exists
     {
         return 0;
     }
@@ -302,6 +305,10 @@ int WhatsappServer::exitClient(std::string& clientName)
     {
 //        std::cout << "delete from group" << std::endl;
         group.second.erase(clientName);
+        if (group.second.empty()) // last client has left the group
+        {
+            this->groups.erase(group.first);
+        }
     }
 //    std::cout << "after for" << std::endl;
     print_exit(true, clientName);

@@ -60,7 +60,8 @@ int WhatsappClient::validateName(const std::string& name){
 }
 
 int WhatsappClient::validateGroup(const std::string& name, const std::vector<std::string>& clients){
-    if ((validateName(name) != 0) || (clients.size() < MIN_GROUP_SIZE) || (clients.size() == 1 && clients.back() == name))
+    if ((validateName(name) != 0) || (clients.size() < MIN_GROUP_SIZE) || (clients.size() == 1 && clients
+                                                                                                          .back() == myName))
     {
         return -1;
     }
