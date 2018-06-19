@@ -60,18 +60,15 @@ int WhatsappClient::validateName(const std::string& name){
 }
 
 int WhatsappClient::validateGroup(const std::string& name, const std::vector<std::string>& clients){
-    if ((validateName(name) != 0) || (clients.size() < MIN_GROUP_SIZE))
+    if ((validateName(name) != 0) || (clients.size() < MIN_GROUP_SIZE) || (clients.size() == 1 && clients.back() == name))
     {
-//        std::cout << "group is invalid" << std::endl;
-        // is this client in the group
-
         return -1;
     }
     return 0;
 }
 
-int WhatsappClient::validateSend(std::string& receiver){
-    return isReceiverNotMe(receiver);
+int WhatsappClient::validateSend(std::string& receiver, std::string& message){
+    return (isReceiverNotMe(receiver) || (message.size() > MAX_MESSAGE_LEN));
 }
 
 //const int WhatsappClient::isGroupMember(std::string& groupName)
@@ -194,7 +191,7 @@ int WhatsappClient::inputFromUser(std::string msg)
             break;
         case SEND:
             lastName = name;
-            if (validateSend(name) != 0){
+            if (validateSend(name, message) != 0){
                 print_send(false, false, myName, name, message);
                 return -1;
             }
@@ -203,10 +200,20 @@ int WhatsappClient::inputFromUser(std::string msg)
             break;
         case EXIT:
             break;
+        case NAME:
+            break;
+        case SERVER_CRASH:
+            break;
+        case CLIENTS:
+            break;
+        case RECEIVER:
+            break;
         case INVALID:
 //            std::cout << "in inputFromUser" << std::endl;
             print_invalid_input();
             break;
+        default:
+                break;
     }
 
     return 0;
@@ -247,14 +254,14 @@ int WhatsappClient::inputFromServer(std::string msg)
 int WhatsappClient::readFromServer()
 {
 //    char* readBuffer;
-    auto readBuffer = new char[MAX_MESSAGE_LEN+1];
-    bzero(readBuffer,MAX_MESSAGE_LEN+1);
+    auto readBuffer = new char[WA_MAX_MESSAGE+1];
+    bzero(readBuffer,WA_MAX_MESSAGE+1);
     int totalBytesRead = 0; //counts bytes read
     int bytesRead = 0; // bytes read this pass
-    while (totalBytesRead < MAX_MESSAGE_LEN)
+    while (totalBytesRead < WA_MAX_MESSAGE)
     { /* loop until full buffer */
 //        std::cout << "in while" << std::endl;
-        bytesRead = (int) read(socketHandle, readBuffer, (MAX_MESSAGE_LEN - totalBytesRead));
+        bytesRead = (int) read(socketHandle, readBuffer, (WA_MAX_MESSAGE - totalBytesRead));
 //        std::cout << "readBuffer" << readBuffer << std::endl;
         if (bytesRead > 0)
         {
@@ -275,11 +282,11 @@ int WhatsappClient::readFromServer()
     }
 //    std::cout << "out of while: " << readBuffer-MAX_MESSAGE_LEN << std::endl;
 
-    if (inputFromServer(readBuffer-MAX_MESSAGE_LEN) != 0) // updates lastCommand, lastName, lastClients
+    if (inputFromServer(readBuffer-WA_MAX_MESSAGE) != 0) // updates lastCommand, lastName, lastClients
     {
         return -1;
     }
-    delete (readBuffer-MAX_MESSAGE_LEN);
+    delete (readBuffer-WA_MAX_MESSAGE);
     return totalBytesRead;
 }
 
@@ -330,8 +337,8 @@ int WhatsappClient::writeToServer(std::string msg) //needed? (writea according t
 {
 //    char* writeBuffer;
 //    std::cout << "write to server: " << msg << std::endl;
-    auto writeBuffer = new char[MAX_MESSAGE_LEN+1];
-    bzero(writeBuffer,MAX_MESSAGE_LEN+1);
+    auto writeBuffer = new char[WA_MAX_MESSAGE+1];
+    bzero(writeBuffer,WA_MAX_MESSAGE+1);
     if (initalized && (inputFromUser(msg) != 0))
     {
         return -1;
@@ -342,9 +349,9 @@ int WhatsappClient::writeToServer(std::string msg) //needed? (writea according t
     int totalBytesWritten = 0; //counts bytes read
     int bytesWritten = 0; // bytes read this pass
 
-    while (totalBytesWritten < MAX_MESSAGE_LEN)
+    while (totalBytesWritten < WA_MAX_MESSAGE)
     { /* loop until full buffer */
-        bytesWritten = (int) write(socketHandle, writeBuffer, (MAX_MESSAGE_LEN - totalBytesWritten));
+        bytesWritten = (int) write(socketHandle, writeBuffer, (WA_MAX_MESSAGE - totalBytesWritten));
         if (bytesWritten > 0)
         {
             totalBytesWritten += bytesWritten;

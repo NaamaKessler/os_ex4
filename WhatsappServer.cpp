@@ -23,6 +23,7 @@ WhatsappServer::WhatsappServer(unsigned short portNum)
     memset(&this->sa, 0, sizeof(this->sa));
     sa.sin_family = (sa_family_t)hp->h_addrtype;
     memcpy(&sa.sin_addr, hp->h_addr, (size_t)hp->h_length);
+    this->sa.sin_addr.s_addr = INADDR_ANY; //todo
     sa.sin_port = htons(portNum);
 
     // init and bind listening socket
@@ -200,27 +201,25 @@ int WhatsappServer::sendToGroup(std::string& groupName, std::string& origName, s
 {
     if (this->groups.find(groupName) != this->groups.end())
     {
-        std::set<std::string> clients = this->groups[groupName];
-        for (const std::string& client: clients)
+        std::set<std::string> groupMembers = this->groups[groupName];
+        if (groupMembers.find(origName) != groupMembers.end())
         {
-            if (client != origName)
+            for (const std::string& groupMember: groupMembers)
             {
-//                std::cout << "client: " << client << std::endl;
-                if (sendMessage(SEND, origName, client, msg) == 0)
+                if (groupMember != origName)
                 {
-                    // error
-                    return 0;
+//                std::cout << "groupMember: " << groupMember << std::endl;
+                    if (sendMessage(SEND, origName, groupMember, msg) == 0)
+                    {
+                        // error
+                        return 0;
+                    }
                 }
             }
+            return 1;
         }
-
-        return 1;
     }
-    else
-    {
-        //error
-        return 0;
-    }
+    return 0;
 }
 
 /**
@@ -281,7 +280,7 @@ int WhatsappServer::whosConnected(std::string& clientName)
         clientsNamesVec.push_back(pair.first);
     }
     std::sort(clientsNamesVec.begin(), clientsNamesVec.end());
-    for (int i = 0; i < clientsNamesVec.size() - 1; i++)
+    for (unsigned int i = 0; i < clientsNamesVec.size() - 1; i++)
     {
         connectedClientsNames += clientsNamesVec[i];
         connectedClientsNames += ",";
@@ -345,20 +344,6 @@ int WhatsappServer::insertName(int clientFd, std::string& name)
 void WhatsappServer::echoClient(std::string& clientName, int success)
 {
     std::string successVal = std::to_string(success);
-//    unsigned int byteCount = 0;
-//    unsigned int byteWritten = 0;
-//    while (byteCount < sizeof(int))
-//    {
-//        byteWritten = (unsigned int)write(clientFd, (char*)(&success), 4);
-//        if (byteWritten > 0)
-//        {
-//            byteCount += byteWritten;
-//        }
-//        else
-//        {
-//            print_error("write", errno);
-//        }
-//    }
     this->sendMessage(INVALID, clientName, clientName, successVal);
 }
 
@@ -369,21 +354,7 @@ void WhatsappServer::echoClient(std::string& clientName, int success)
 void WhatsappServer::signalExit(const std::string& clientName)
 {
     std::string crash_protocol = "server_crash ";
-//    unsigned int byteCount = 0;
-//    unsigned int byteWritten = 0;
-//    while (byteCount < sizeof(char)*crash_protocol.length())
-//    {
-//        byteWritten = (int)write(clientFd, crash_protocol.c_str() + byteWritten, sizeof(int));
-//        if (byteWritten > 0)
-//        {
-//            byteCount += byteWritten;
-//        }
-//        else
-//        {
-//            print_error("write", errno);
-//        }
     sendMessage(INVALID, crash_protocol, clientName, crash_protocol);
-//    }
 }
 
 

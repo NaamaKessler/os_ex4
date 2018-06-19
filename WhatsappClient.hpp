@@ -47,7 +47,7 @@ public:
     int isReceiverNotMe(std::string& receiver);
     int validateName(const std::string& name);
     int validateGroup(const std::string& name, const std::vector<std::string>& clients);
-    int validateSend(std::string& receiver);
+    int validateSend(std::string& receiver, std::string& message);
     int setLastCommand(command_type command);
     command_type getLastCommand();
     int setLastName(std::string& name);
