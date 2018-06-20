@@ -133,9 +133,6 @@ WhatsappClient::WhatsappClient(char* clientName, char* serverAddress, char* serv
     {
         print_fail_connection();
         exit(1);
-    } else
-    { // connected
-//        print_connection();
     }
 }
 
@@ -327,7 +324,6 @@ int WhatsappClient::readFromServer()
 
     }
 
-
     if (inputFromServer(readBuffer-WA_MAX_INPUT) != 0) // updates lastCommand, lastName, lastClients
     {
         return -1;
@@ -364,7 +360,7 @@ int WhatsappClient::clientOutput(command_type commandT, std::string name, std::s
             {
                 print_connection();
             } else {
-                print_fail_connection();
+                print_dup_connection();
                 close(this->getSocketHandle());
                 exit(1);
             }
@@ -492,6 +488,8 @@ int main(int argc, char* argv[]){
             }
         }
     }
+    whatsappClient->readFromServer();
+
 
     delete(whatsappClient);
     exit(0);

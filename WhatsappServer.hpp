@@ -111,7 +111,7 @@ private:
      * @param clientFd
      * @param success
      */
-    void echoClient(std::string& clientName, int clientFd, int success);
+    void echoClient(command_type command, std::string& clientName, int clientFd, int success);
 
 
 };

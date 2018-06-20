@@ -113,7 +113,7 @@ void WhatsappServer::readClient(std::string clientName, int clientFd)
     {
         case CREATE_GROUP:
             success = createGroup(clientName, name, clients);
-            echoClient(clientName, clientFd, success);
+            echoClient(CREATE_GROUP, clientName, clientFd, success);
             break;
         case SEND:
             if (this->groups.find(name) != this->groups.end())
@@ -125,14 +125,15 @@ void WhatsappServer::readClient(std::string clientName, int clientFd)
                 success = sendMessage(SEND, clientName, clientFd, name, message);
             }
             print_send(true, success, clientName, name, message);
-            echoClient(clientName, clientFd, success);
+            echoClient(SEND, clientName, clientFd, success);
             break;
         case WHO:
             success = whosConnected(clientName);
-            echoClient(clientName, clientFd, success);
+            echoClient(WHO, clientName, clientFd, success);
             break;
         case EXIT:
-            exitClient(clientName);
+            success = exitClient(clientName);
+            echoClient(EXIT, clientName, clientFd, success);
             break;
         case NAME:
             success = insertName(clientFd, name);
@@ -144,7 +145,7 @@ void WhatsappServer::readClient(std::string clientName, int clientFd)
                     break;
                 }
             }
-            echoClient(name, clientFd, success);
+            echoClient(NAME, name, clientFd, success);
         default: //we won't get here since Client makes sure that the command type is valid.
             break;
     }
@@ -235,8 +236,8 @@ int WhatsappServer::sendMessage(command_type command, std::string &originName, i
                                 const std::string &destName, std::string &message)
 {
     // verify that the client exists:
-    if (this->connectedClients.empty() || (this->connectedClients.find(destName) == this->connectedClients
-                                                                                           .end()))
+    if ((!(command == EXIT)) && (this->connectedClients.empty() || (this->connectedClients.find(destName) ==
+                this->connectedClients.end())))
     {
         return 0;
     }
@@ -251,13 +252,16 @@ int WhatsappServer::sendMessage(command_type command, std::string &originName, i
     {
         fullMsg = message;
     }
-
     // if connection has failed, we need to send a fail signal to the client, which is currently named '???'.
     // Iterate over the '???' clients and find the one with correct Fd.
-    int destination = this->connectedClients.at(destName);
-    if (command == NAME && message == "0")
+    int destination;
+    if ((command == EXIT) || (command == NAME && message == "0"))
     {
         destination = origFd;
+    }
+    else
+    {
+        destination = this->connectedClients.at(destName);
     }
     int byteCount = 0;
     int byteWritten = 0;
@@ -330,7 +334,6 @@ int WhatsappServer::insertName(int clientFd, std::string& name)
     // make sure name is not in use already:
     if (this->connectedClients.find(name) != this->connectedClients.end())
     {
-        print_dup_connection();
         return 0;
     }
 
@@ -352,10 +355,10 @@ int WhatsappServer::insertName(int clientFd, std::string& name)
 /**
  * Signals the client that the request has succeeded/failed.
  */
-void WhatsappServer::echoClient(std::string& clientName, int clientFd, int success)
+void WhatsappServer::echoClient(command_type command, std::string& clientName, int clientFd, int success)
 {
     std::string successVal = std::to_string(success);
-    this->sendMessage(NAME, clientName, clientFd, clientName, successVal);
+    this->sendMessage(command, clientName, clientFd, clientName, successVal);
 }
 
 
