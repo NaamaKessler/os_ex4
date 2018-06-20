@@ -17,9 +17,7 @@
 #include <algorithm>
 
 // ------------------------------- constants ------------------------------- //
-#define MAX_NAME_SIZE = 30
-#define MAX_MSG_LEN = 256
-#define MAX_CLIENTS_NUM
+
 #define DEFAULT_CLIENT_NAME "???" // place-holder for a new client's name
 
 
@@ -47,13 +45,13 @@ public:
 
     /**
     * Reads messages from the client and carries them out.
-    * @return
+    * @return 1 upon success, 0 upon failure.
     */
-    void readClient(std::string clientName);
+    void readClient(std::string clientName, int clientFd);
 
     /**
     * Return the map of clients and their Fds.
-    * @return
+    * @return 1 upon success, 0 upon failure.
     */
     std::map<std::string, int> getClients();
 
@@ -80,9 +78,13 @@ private:
     * Sends message from one client to the another.
     * @return 1 on success, 0 otherwise.
     */
-    int sendMessage(command_type command, std::string &originName, const std::string &destName,
+    int sendMessage(command_type command, std::string &originName, int origFd, const std::string &destName,
                     std::string &message);
 
+    /**
+     * Sends a message to all groupName members.
+     * @return 1 upon success, 0 upon failure.
+     */
     int sendToGroup(std::string& groupName, std::string& origName, std::string& msg);
 
     /**
@@ -109,7 +111,7 @@ private:
      * @param clientFd
      * @param success
      */
-    void echoClient(std::string& clientName, int success);
+    void echoClient(std::string& clientName, int clientFd, int success);
 
 
 };

@@ -73,7 +73,8 @@ void print_create_group(bool server, bool success, const std::string& client, co
  * name: Name of the client/group destination of the message
  * message: The message
 */
-void print_send(bool server, bool success, const std::string& client, const std::string& name, const std::string& message);
+void print_send(bool server, bool success, const std::string& client, const std::string& name,
+                const std::string& message);
 
 /*
  * Description: Prints to the screen the messages recieved by the client
@@ -121,10 +122,7 @@ void print_error(const std::string& function_name, int error_number);
  * message: The message
  * clients: a vector containing the names of all clients
 */
-void parse_command(const std::string& command, command_type& commandT, std::string& name, std::string& messsage, std::vector<std::string>& clients);
-
-//void parse_inner_command(const std::string& command, command_type& commandT,
-//                         std::string& name, std::string& message,
-//                         std::vector<std::string>& clients);
+void parse_command(const std::string& command, command_type& commandT, std::string& name, std::string&
+messsage, std::vector<std::string>& clients);
 
 #endif
