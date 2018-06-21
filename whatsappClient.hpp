@@ -21,19 +21,19 @@
 #define MAX_PORT_NUM 65535
 #define MIN_PORT_NUM 1024
 
-// ------------------------------- class WhatsappClient ------------------------------- //
-class WhatsappClient
+// ------------------------------- class whatsappClient ------------------------------- //
+class whatsappClient
 {
 public:
     /**
      * WhatsappClient constructor.
      */
-    WhatsappClient(char* clientName, char* serverAddress, char* serverPort);
+    whatsappClient(char* clientName, char* serverAddress, char* serverPort);
 
     /**
      * WhatsappClient destructor.
      */
-    ~WhatsappClient();
+    ~whatsappClient();
 
     /**
      * tries to callSocket to the server.

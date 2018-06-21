@@ -21,8 +21,8 @@
 #define DEFAULT_CLIENT_NAME "???" // place-holder for a new client's name
 
 
-// ------------------------------- class WhatsappServer ------------------------------- //
-class WhatsappServer
+// ------------------------------- class whatsappServer ------------------------------- //
+class whatsappServer
 {
 public:
     int listeningSocket;
@@ -30,12 +30,12 @@ public:
     /**
     * initializes the server and opens a general requests socket.
     */
-    explicit WhatsappServer(unsigned short portNum);
+    explicit whatsappServer(unsigned short portNum);
 
     /**
      * Destructor.
      */
-    ~WhatsappServer();
+    ~whatsappServer();
 
     /**
     * Accepts a connection request and opens a socket for communication with the client.
